@@ -36,14 +36,6 @@ def _instrument(mcp: FastMCP) -> None:
 
     logger = logging.getLogger("baton_mcp.instrument")
     dsn = os.environ.get("BATON_DSN", "").strip()
-    instrument = os.environ.get("BATON_INSTRUMENT", "").lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }
-    if not dsn and not instrument:
-        return
     try:
         from baton.integrations.standalone import VendorConfig, install_baton
         from baton.sinks import StdoutSink
@@ -75,10 +67,11 @@ def build_mcp() -> FastMCP:
 
     # Self-instrumentation: wrap every tool registered below so calls to them
     # emit Baton friction events, the same way a customer's wrapped server
-    # does. Opt-in via BATON_DSN (a packed DSN from /account) or, for local
-    # dev, BATON_INSTRUMENT=1 (StdoutSink). With neither, install is skipped
-    # and the server behaves exactly as if this call were absent. Wrapped in
-    # try/except so a misconfigured DSN can never take the server down.
+    # does. Uses a packed DSN (BATON_DSN) when set — HttpSink to that console,
+    # no other env vars. Otherwise falls back to StdoutSink (JSON Lines on
+    # stderr), so events are still emitted with no configuration at all.
+    # Wrapped in try/except so a misconfigured DSN can never take the server
+    # down.
     _instrument(mcp)
 
     # Liveness probe. Deliberately NOT a Baton API reachability check: a probe
