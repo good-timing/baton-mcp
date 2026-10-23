@@ -3,8 +3,8 @@ revision = 5
 requires-python = ">=3.11"
 resolution-markers = [
     "python_full_version >= '3.15' and sys_platform == 'win32'",
-    "python_full_version == '3.14.*' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and sys_platform != 'win32'",
+    "python_full_version == '3.14.*' and sys_platform == 'win32'",
     "python_full_version == '3.14.*' and sys_platform != 'win32'",
     "python_full_version < '3.14' and sys_platform == 'win32'",
     "python_full_version < '3.14' and sys_platform != 'win32'",
@@ -144,6 +144,7 @@ name = "baton-mcp"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "baton-sdk", extra = ["fastmcp", "http"] },
     { name = "fastmcp" },
     { name = "httpx" },
     { name = "mcp" },
@@ -160,6 +161,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "baton-sdk", extras = ["fastmcp", "http"], specifier = ">=0.8.19" },
     { name = "fastmcp", specifier = ">=2.10,<4" },
     { name = "httpx", specifier = ">=0.25" },
     { name = "mcp", specifier = ">=1.30,<2" },
@@ -170,6 +172,28 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6" },
 ]
 provides-extras = ["dev"]
+
+[[package]]
+name = "baton-sdk"
+version = "0.8.20"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "httpx" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/74/d2/5f3578e1cbd39f6ca912b70bbcdf888a711f9c676d455176233837c16fd1/baton_sdk-0.8.20.tar.gz", hash = "sha256:d62054d9f23c6a3e1c77d6dc9023fc1efea072491afea9ef85529c22a8aa468d", size = 272858, upload-time = "2026-10-20T02:21:49.819Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e8/80/9b2d730002fab69cdfc9f2bd0a96bbb0345eb59752fe2faa7c8a8794b135/baton_sdk-0.8.20-py3-none-any.whl", hash = "sha256:eb2b887f0c89f6dc059d69427f5c2269fb405436e807525b0304e02a9c42e5f9", size = 209225, upload-time = "2026-10-20T02:21:48.139Z" },
+]
+
+[package.optional-dependencies]
+fastmcp = [
+    { name = "fastmcp" },
+]
+http = [
+    { name = "httpx" },
+]
 
 [[package]]
 name = "beartype"

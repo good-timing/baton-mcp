@@ -30,6 +30,40 @@ from baton_mcp.config import TENANT_HEADER, api_base_url
 from baton_mcp.types import AgentAnswer
 
 
+def _instrument(mcp: FastMCP) -> None:
+    """Opt-in self-instrumentation via baton-sdk. No-op when unconfigured."""
+    import logging
+
+    logger = logging.getLogger("baton_mcp.instrument")
+    dsn = os.environ.get("BATON_DSN", "").strip()
+    instrument = os.environ.get("BATON_INSTRUMENT", "").lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    if not dsn and not instrument:
+        return
+    try:
+        from baton.integrations.standalone import VendorConfig, install_baton
+        from baton.sinks import StdoutSink
+
+        if dsn:
+            install_baton(mcp, dsn=dsn)
+        else:
+            install_baton(
+                mcp,
+                VendorConfig(
+                    vendor_id="baton-mcp",
+                    vendor_display_name="Baton MCP",
+                    sink=StdoutSink(),
+                ),
+            )
+        logger.info("baton-mcp self-instrumentation enabled")
+    except Exception as e:  # never take the server down over telemetry
+        logger.warning("baton-mcp self-instrumentation skipped: %s", e)
+
+
 def _transport() -> tuple[str | None, str | None]:
     req = get_http_request()
     return req.headers.get("authorization"), req.headers.get(TENANT_HEADER)
@@ -38,6 +72,14 @@ def _transport() -> tuple[str | None, str | None]:
 def build_mcp() -> FastMCP:
     """Construct the metrics MCP server (one tool per answer-type)."""
     mcp: FastMCP = FastMCP("baton-mcp", version=__version__)
+
+    # Self-instrumentation: wrap every tool registered below so calls to them
+    # emit Baton friction events, the same way a customer's wrapped server
+    # does. Opt-in via BATON_DSN (a packed DSN from /account) or, for local
+    # dev, BATON_INSTRUMENT=1 (StdoutSink). With neither, install is skipped
+    # and the server behaves exactly as if this call were absent. Wrapped in
+    # try/except so a misconfigured DSN can never take the server down.
+    _instrument(mcp)
 
     # Liveness probe. Deliberately NOT a Baton API reachability check: a probe
     # that fans out an upstream call per poll turns a console blip into this
