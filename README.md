@@ -12,9 +12,6 @@ plane is the public `/v0/metrics` JSON API.
 - **Auth:** the workspace credential travels in the transport headers —
   `Authorization: Bearer <workspace API key>` + `X-Baton-Tenant-Id` — never in
   the tool schema. The token is passed through to the Baton API untouched.
-- **Token thrift:** the full API `Answer` carries a per-row `signal_ids` audit
-  trail; the MCP tools project it down to headline + ranked rows + coverage
-  counts.
 
 ## Tools
 
@@ -30,8 +27,7 @@ plane is the public `/v0/metrics` JSON API.
 | Env | Default | Meaning |
 | --- | --- | --- |
 | `BATON_API_BASE_URL` | `https://baton.goodtiming.ai` | Baton API origin |
-| `BATON_MCP_HOST` / `BATON_MCP_PORT` | `0.0.0.0` / `8000` | Listen address |
-| `BATON_API_TIMEOUT` | `30` | API call timeout, seconds |
+| `BATON_MCP_HOST` / `BATON_MCP_PORT` | `::` (dual-stack) / `8000` | Listen address |
 
 ## Running
 
@@ -48,27 +44,11 @@ Two HTTP surfaces on one port:
   **not** ping the Baton API, on purpose: a probe that fans out an upstream
   call per poll turns a console blip into this service flapping too.
 
-## Dev proxy
-
-`BATON_DEV_PROXY=1` turns on a **dev-only** catch-all: every URL the MCP
-server does not own is reverse-proxied to the console named by
-`BATON_API_BASE_URL`, so both ends live on one origin during development.
-Headers pass through untouched (Authorization, `X-Baton-Tenant-Id`); hop-by-hop
-headers are dropped. The API and the proxy always use the same URL — there is
-one knob, not two.
-
-- `make dev` — console on `:8000` (`make dev` in `baton-console/`), baton-mcp
-  on `:8010`, both data plane and proxy -> `:8000`.
-- `make prod` — proxies to the **real** console (`baton.goodtiming.ai`), so
-  the MCP tools return real answers and any console page you open through it
-  acts on prod data with real credentials. Port `:8011`.
-
-Unset means a plain server; there is no prod path to it.
-
 Point a client at it:
 
+
 ```sh
-claude mcp add --transport http baton https://mcp.goodtiming.ai \
+claude mcp add --transport http baton https://mcp.goodtiming.ai/mcp \
   --header "Authorization: Bearer $BATON_API_KEY" \
   --header "X-Baton-Tenant-Id: $BATON_TENANT_ID"
 ```
@@ -82,9 +62,8 @@ Needs [uv](https://docs.astral.sh/uv/) — it builds the venv from the committed
 make install    # installs in .venv, from uv.lock
 make test       # pytest
 make ci         # lint + format-check + typecheck + test
-make dev        # dev proxy: serve on :8010, forward non-MCP URLs to a locally
-                # running console on :8000 (`make dev` in baton-console/)
-make prod       # proxy non-MCP URLs to the REAL console — see the warning
+make dev        # local dev: serve on :8010, MCP tools call local baton-console
+make live-dev   # dev with live prod data, MCP tools call prod API
 ```
 
 After changing a dependency, run `uv lock` here and commit the lock.

@@ -6,6 +6,11 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 include = ["baton_mcp*"]
 
+# The vendored OpenAPI spec must ship with the package: prod loads it from
+# the installed copy, never from a live console.
+[tool.setuptools.package-data]
+baton_mcp = ["openapi.json", "py.typed"]
+
 [project]
 name = "baton-mcp"
 version = "0.1.0"

@@ -9,7 +9,7 @@ PYTHON_VERSION ?= 3.11
 VENV ?= .venv
 BIN = $(VENV)/bin
 
-.PHONY: install dev prod test lint format format-check typecheck ci
+.PHONY: install dev live-dev test lint format format-check typecheck ci
 
 # `--locked` FAILS on a stale lock rather than re-resolving, which is what
 # makes this venv the same tree CI builds. Run `uv lock` here after changing
@@ -18,37 +18,21 @@ install:
 	UV_PROJECT_ENVIRONMENT=$(abspath $(VENV)) uv sync --locked --extra dev --python $(PYTHON_VERSION)
 
 # Dev server (Streamable HTTP). Overridable via env-style args:
-# `make run BATON_MCP_PORT=8001` or `BATON_API_BASE_URL=http://localhost:8000 make run`
-# The dev proxy needs the app's own port knob regardless of which target:
-BATON_MCP_PORT ?= 8010
-
 # Console in another shell first: `make dev` from baton-console/ (uvicorn :8000).
-
-# ⚠ `make prod` proxies to the REAL console: every console page you open
-# through it runs against prod data and prod spend (signup, sign-in, account
-# settings are all no-different). That is the point — dogfooding the MCP tools
-# against real answers — but treat the browser at :8011 as prod.
-BATON_PROD_CONSOLE_URL ?= https://baton.goodtiming.ai
-BATON_PROD_PORT ?= 8011
-
-# Command-line make vars are NOT exported to recipes by default, so the env
-# vars ride on the command itself — `make run BATON_MCP_PORT=8001` would
-# otherwise be accepted by make and silently ignored by the app.
-# `dev` runs BOTH the data plane (BATON_API_BASE_URL) and the browser proxy
-# (BATON_DEV_CONSOLE_URL) against the local console, so a tool call shows up
-# in the console's uvicorn log AND the browser pages you open on :8010 land on
-# the local console. `prod` keeps the data plane on prod (real answers) and
-# proxies browser pages to prod.
+# `dev` runs BOTH the data plane (BATON_API_BASE_URL) against the local console,
+# so a tool call shows up in the console's uvicorn log
 dev:
 	BATON_API_BASE_URL=http://localhost:8000 \
-	BATON_MCP_DEBUG=1 BATON_DEV_PROXY=1 \
-	BATON_MCP_PORT=$(BATON_MCP_PORT) \
+	BATON_MCP_PORT=8010 \
+	BATON_MCP_DEBUG=1 \
 	$(BIN)/python -m baton_mcp
 
-prod:
-	BATON_API_BASE_URL=$(BATON_PROD_CONSOLE_URL) \
-	BATON_MCP_DEBUG=1 BATON_DEV_PROXY=1 \
-	BATON_MCP_PORT=$(BATON_PROD_PORT) \
+# ⚠ `make dev-live` calls the REAL console API
+# That is the point — dogfooding the MCP tools against real answers
+# Treat the browser at :8011 as prod.
+live-dev:
+	BATON_MCP_PORT=8011 \
+	BATON_MCP_DEBUG=1 \
 	$(BIN)/python -m baton_mcp
 
 test:
@@ -73,3 +57,10 @@ format-check:
 
 # CI gate — lint + format-check + typecheck + test
 ci: lint format-check typecheck test
+
+# Refresh the vendored OpenAPI spec from a locally running baton-console.
+# Run `make dev` in baton-console/ first (uvicorn :8000, docs enabled in dev).
+# The script keeps only /v0/metrics/ paths, strips agent-useless facets, and
+# writes stable (sorted, pretty) JSON so refreshes diff cleanly.
+refresh-openapi:
+	$(BIN)/python scripts/refresh_openapi.py

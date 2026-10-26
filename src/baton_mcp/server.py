@@ -1,37 +1,190 @@
-"""The baton-mcp server: four metrics tools over the Baton HTTP API.
+"""MCP server built from the Console's OpenAPI spec.
 
-The tool surface is copied 1:1 from the console's metrics MCP adapter
-(``baton-console/backend/src/baton_console/metrics/mcp.py``) — same names,
-same docstrings, same facets — because the initial four answer-types are the
-same catalog. The data plane differs: each call goes to the public
-``/v0/metrics`` JSON API (``metrics/routes.py``) with the workspace credential
-passed through, so this process never reads the database or imports console
-internals. It is a client of the API, the same as any customer integration.
+Instead of hand-written tool wrappers (see the previous implementation in git
+history), this server is generated from the Console's OpenAPI document at
+``/openapi.json`` using ``FastMCP.from_openapi``. Only routes under
+``/v0/metrics/`` are exposed; everything else (ingest, auth, …) is excluded
+via a ``RouteMap``.
 
-Auth mirrors the console adapter exactly: the workspace credential travels in
-the **transport headers** (Authorization bearer + ``X-Baton-Tenant-Id``), never
-the tool schema — so the agent chooses only *facets* (``vendor_id``, window,
-...).
+Auth mirrors the Console's JSON adapter: the workspace credential travels in
+the **transport headers** (Bearer token + ``X-Baton-Tenant-Id``), never the
+tool schema. Because ``from_openapi`` shares one ``httpx.AsyncClient`` across
+all generated tools, per-request auth is injected by a custom transport that
+reads the active MCP HTTP request (``get_http_request``) at call time — the
+same context the generated tool handlers run in.
+
+The OpenAPI spec is vendored inside the package (``baton_mcp/openapi.json``,
+refreshed from a local console via ``make refresh-openapi``), so the server
+never depends on a live console being reachable — including in prod, where the
+console disables its docs endpoint. If the vendored file is missing or
+corrupt, the server starts with just ``/health``.
 """
 
 from __future__ import annotations
 
+import json
+import logging
 import os
+import sys
+from pathlib import Path
 
 import httpx
 from fastmcp import FastMCP
-from fastmcp.exceptions import ToolError
 from fastmcp.server.dependencies import get_http_request
+from fastmcp.server.providers.openapi import MCPType, RouteMap
 from starlette.responses import JSONResponse
 
 from baton_mcp import __version__
-from baton_mcp.client import BatonApiError, answer_for
 from baton_mcp.config import TENANT_HEADER, api_base_url
-from baton_mcp.types import AgentAnswer
+
+# Per-request timeout for upstream Console API calls. Hardcoded (not env-driven)
+# to keep the surface small; bump here if a metrics query needs more room.
+API_TIMEOUT = 30.0
+
+# The vendored spec lives inside the package, so it ships with any wheel /
+# installed copying of baton_mcp (not just repository checkouts).
+SPEC_PATH = Path(__file__).resolve().parent / "openapi.json"
+
+# Facets the agent never needs, stripped from the spec before tool generation.
+# `include` adds the per-row signal_ids audit trail to the response — token
+# bloat an owner's agent has no use for.
+AGENT_USELESS_PARAMS = frozenset({"include"})
+
+
+class _AuthInjectingTransport(httpx.AsyncHTTPTransport):
+    """Inject per-request auth headers into every upstream call.
+
+    ``from_openapi`` shares one ``httpx.AsyncClient`` across all generated
+    tools, so the client's headers are fixed at construction. This transport
+    runs inside the same async task as the generated tool handler, where
+    ``get_http_request()`` returns the active MCP HTTP request — so we can
+    pull the bearer token and tenant id from the transport headers and add
+    them to the outgoing request at call time.
+    """
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        try:
+            mcp_request = get_http_request()
+            auth = mcp_request.headers.get("authorization")
+            tenant = mcp_request.headers.get(TENANT_HEADER)
+            if auth:
+                request.headers["Authorization"] = auth
+            if tenant:
+                request.headers[TENANT_HEADER] = tenant
+        except RuntimeError:
+            # No active MCP request (startup, tests, non-HTTP context) — pass
+            # through without auth; the upstream will 401, which is correct.
+            pass
+        if os.environ.get("BATON_MCP_DEBUG"):
+            _debug_upstream_requests(request)
+        return await super().handle_async_request(request)
+
+
+_debug_handler_installed = False
+
+
+def _debug_upstream_requests(request: httpx.Request) -> None:
+    """Install (once) a stderr handler and emit one line per upstream call.
+
+    The flag-gated level dance and handler belong at setup time, not per
+    request — a bare ``logger.debug`` gets dropped without a handler, because
+    a handlerless logger propagates to root, and root's lastResort only emits
+    WARNING and above.
+    """
+    global _debug_handler_installed
+    if not _debug_handler_installed:
+        handler = logging.StreamHandler(sys.stderr)
+        handler.setFormatter(logging.Formatter("%(name)s: %(message)s"))
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging.DEBUG)
+        logger.addHandler(handler)
+        logger.propagate = False
+        _debug_handler_installed = True
+    logging.getLogger(__name__).debug("baton-mcp -> %s %s", request.method, request.url)
+
+
+def _fetch_spec() -> dict[str, object] | None:
+    """Load the OpenAPI spec vendored inside the package.
+
+    The spec ships with the package (compile-time, not startup-fetched), so
+    the server works identically in dev, CI and prod where the console
+    disables its ``/openapi.json`` endpoint. Agent-useless facets are stripped
+    before tool generation.
+    """
+    if SPEC_PATH.is_file():
+        try:
+            return _strip_agent_useless_params(json.loads(SPEC_PATH.read_text()))
+        except (OSError, json.JSONDecodeError):
+            pass
+    return None
+
+
+def _strip_agent_useless_params(spec: dict[str, object]) -> dict[str, object]:
+    """Drop parameters the agent never needs from exposed operations."""
+    paths = spec.get("paths")
+    if not isinstance(paths, dict):
+        return spec
+    for path, ops in paths.items():
+        if not path.startswith("/v0/metrics/"):
+            continue
+        for op in ops.values():
+            if not isinstance(op, dict):
+                continue
+            params = op.get("parameters")
+            if isinstance(params, list):
+                op["parameters"] = [
+                    p
+                    for p in params
+                    if not (isinstance(p, dict) and p.get("name") in AGENT_USELESS_PARAMS)
+                ]
+    return spec
+
+
+def build_mcp() -> FastMCP:
+    """Construct the metrics MCP server from the Console's OpenAPI spec.
+
+    Only ``/v0/metrics/*`` routes are exposed. Self-instrumentation via
+    baton-sdk registers middleware over the underlying MCP server, so it
+    captures the generated tools like any other.
+    """
+    base_url = api_base_url()
+    spec = _fetch_spec()
+
+    if spec is None:
+        # No spec available — start with an empty server (just /health).
+        mcp = FastMCP("baton-mcp", version=__version__)
+        _instrument(mcp)
+        _add_health(mcp)
+        return mcp
+
+    transport = _AuthInjectingTransport()
+    client = httpx.AsyncClient(base_url=base_url, transport=transport, timeout=API_TIMEOUT)
+
+    mcp = FastMCP.from_openapi(
+        openapi_spec=spec,
+        client=client,
+        name="baton-mcp",
+        route_maps=[
+            # Only metrics routes become tools.
+            RouteMap(methods=["GET"], pattern=r"^/v0/metrics/", mcp_type=MCPType.TOOL),
+            # Everything else (ingest, auth, UI, …) is dropped.
+            RouteMap(pattern=r".*", mcp_type=MCPType.EXCLUDE),
+        ],
+    )
+
+    _instrument(mcp)
+    _add_health(mcp)
+    return mcp
+
+
+def _add_health(mcp: FastMCP) -> None:
+    @mcp.custom_route("/health", methods=["GET"])
+    async def health(request) -> JSONResponse:  # type: ignore[no-untyped-def]
+        return JSONResponse({"status": "ok", "version": __version__})
 
 
 def _instrument(mcp: FastMCP) -> None:
-    """Opt-in self-instrumentation via baton-sdk. No-op when unconfigured."""
+    """Self-instrumentation via baton-sdk. Always on."""
     import logging
 
     logger = logging.getLogger("baton_mcp.instrument")
@@ -54,140 +207,3 @@ def _instrument(mcp: FastMCP) -> None:
         logger.info("baton-mcp self-instrumentation enabled")
     except Exception as e:  # never take the server down over telemetry
         logger.warning("baton-mcp self-instrumentation skipped: %s", e)
-
-
-def _transport() -> tuple[str | None, str | None]:
-    req = get_http_request()
-    return req.headers.get("authorization"), req.headers.get(TENANT_HEADER)
-
-
-def build_mcp() -> FastMCP:
-    """Construct the metrics MCP server (one tool per answer-type)."""
-    mcp: FastMCP = FastMCP("baton-mcp", version=__version__)
-
-    # Self-instrumentation: wrap every tool registered below so calls to them
-    # emit Baton friction events, the same way a customer's wrapped server
-    # does. Uses a packed DSN (BATON_DSN) when set — HttpSink to that console,
-    # no other env vars. Otherwise falls back to StdoutSink (JSON Lines on
-    # stderr), so events are still emitted with no configuration at all.
-    # Wrapped in try/except so a misconfigured DSN can never take the server
-    # down.
-    _instrument(mcp)
-
-    # Liveness probe. Deliberately NOT a Baton API reachability check: a probe
-    # that fans out an upstream call per poll turns a console blip into this
-    # service flapping too (and Cloud Run min-instances pays for it). This
-    # answers "is the process serving", which is what a healthcheck is for.
-    @mcp.custom_route("/health", methods=["GET"])
-    async def health(request) -> JSONResponse:  # type: ignore[no-untyped-def]
-        return JSONResponse({"status": "ok", "version": __version__})
-
-    @mcp.tool()
-    async def top_friction_by_tool(
-        vendor_id: str,
-        window_days: int | None = None,
-        signal_type: str | None = None,
-    ) -> AgentAnswer:
-        """Top friction on a vendor surface, ranked by distinct sessions per tool.
-
-        vendor_id: the vendor surface to ask about. window_days: days back on
-        event time (omit for all-time). signal_type: narrow to one type (e.g.
-        'failure').
-        """
-        authorization, tenant_id = _transport()
-        return await answer_tool(
-            authorization,
-            tenant_id,
-            answer_type="top_friction_by_tool",
-            vendor_id=vendor_id,
-            window_days=window_days,
-            signal_type=signal_type,
-        )
-
-    @mcp.tool()
-    async def top_gaps_clustered(
-        vendor_id: str,
-        window_days: int | None = None,
-    ) -> AgentAnswer:
-        """Capability gaps agents ask a vendor to build, semantically clustered."""
-        authorization, tenant_id = _transport()
-        return await answer_tool(
-            authorization,
-            tenant_id,
-            answer_type="top_gaps_clustered",
-            vendor_id=vendor_id,
-            window_days=window_days,
-        )
-
-    @mcp.tool()
-    async def failure_modes_for_tool(
-        vendor_id: str,
-        tool_name: str,
-        window_days: int | None = None,
-    ) -> AgentAnswer:
-        """Distinct ways agents have trouble with one tool on a vendor surface, including
-        reports where they picked another tool when this one does the job, semantically
-        clustered."""
-        authorization, tenant_id = _transport()
-        return await answer_tool(
-            authorization,
-            tenant_id,
-            answer_type="failure_modes_for_tool",
-            vendor_id=vendor_id,
-            tool_name=tool_name,
-            window_days=window_days,
-        )
-
-    @mcp.tool()
-    async def demand_intents(
-        vendor_id: str,
-        window_days: int | None = None,
-    ) -> AgentAnswer:
-        """What agents arrive to do on a vendor surface, ranked by distinct sessions."""
-        authorization, tenant_id = _transport()
-        return await answer_tool(
-            authorization,
-            tenant_id,
-            answer_type="demand_intents",
-            vendor_id=vendor_id,
-            window_days=window_days,
-        )
-
-    return mcp
-
-
-async def answer_tool(
-    authorization: str | None,
-    tenant_id: str | None,
-    *,
-    answer_type: str,
-    vendor_id: str,
-    tool_name: str | None = None,
-    window_days: int | None = None,
-    signal_type: str | None = None,
-) -> AgentAnswer:
-    """Shared tool body: one API call, API failures surfaced as ToolError.
-
-    Split out of the tool wrappers so they stay one-liners like the console's
-    do, and so tests can drive ``answer_for`` without the FastMCP layer. The
-    API validates the facet combination per answer-type (422), so passing an
-    inapplicable facet is an error at the source, not here.
-    """
-    base = api_base_url()
-    async with httpx.AsyncClient(
-        timeout=httpx.Timeout(float(os.environ.get("BATON_API_TIMEOUT", "30"))),
-    ) as client:
-        try:
-            return await answer_for(
-                base,
-                client,
-                authorization=authorization,
-                tenant_id=tenant_id,
-                answer_type=answer_type,
-                vendor_id=vendor_id,
-                tool_name=tool_name,
-                window_days=window_days,
-                signal_type=signal_type,
-            )
-        except BatonApiError as e:
-            raise ToolError(str(e)) from e
