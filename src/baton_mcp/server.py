@@ -1,7 +1,6 @@
 """MCP server built from the Console's OpenAPI spec.
 
-Instead of hand-written tool wrappers (see the previous implementation in git
-history), this server is generated from the Console's OpenAPI document at
+This server is generated from the Console's OpenAPI document at
 ``/openapi.json`` using ``FastMCP.from_openapi``. Only routes under
 ``/v0/metrics/`` are exposed; everything else (ingest, auth, …) is excluded
 via a ``RouteMap``.
@@ -103,20 +102,25 @@ def _debug_upstream_requests(request: httpx.Request) -> None:
     logging.getLogger(__name__).debug("baton-mcp -> %s %s", request.method, request.url)
 
 
-def _fetch_spec() -> dict[str, object] | None:
+def _fetch_spec() -> dict[str, object]:
     """Load the OpenAPI spec vendored inside the package.
 
     The spec ships with the package (compile-time, not startup-fetched), so
     the server works identically in dev, CI and prod where the console
     disables its ``/openapi.json`` endpoint. Agent-useless facets are stripped
     before tool generation.
+
+    Raises ``RuntimeError`` when the file is missing or unreadable: a server
+    with no tools must not start and look healthy.
     """
-    if SPEC_PATH.is_file():
-        try:
-            return _strip_agent_useless_params(json.loads(SPEC_PATH.read_text()))
-        except (OSError, json.JSONDecodeError):
-            pass
-    return None
+    try:
+        raw = SPEC_PATH.read_text()
+    except OSError as e:
+        raise RuntimeError(f"baton-mcp OpenAPI spec not readable at {SPEC_PATH}: {e}") from e
+    try:
+        return _strip_agent_useless_params(json.loads(raw))
+    except json.JSONDecodeError as e:
+        raise RuntimeError(f"baton-mcp OpenAPI spec at {SPEC_PATH} is not valid JSON: {e}") from e
 
 
 def _strip_agent_useless_params(spec: dict[str, object]) -> dict[str, object]:
@@ -149,13 +153,6 @@ def build_mcp() -> FastMCP:
     """
     base_url = api_base_url()
     spec = _fetch_spec()
-
-    if spec is None:
-        # No spec available — start with an empty server (just /health).
-        mcp = FastMCP("baton-mcp", version=__version__)
-        _instrument(mcp)
-        _add_health(mcp)
-        return mcp
 
     transport = _AuthInjectingTransport()
     client = httpx.AsyncClient(base_url=base_url, transport=transport, timeout=API_TIMEOUT)
