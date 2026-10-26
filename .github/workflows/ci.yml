@@ -1,0 +1,78 @@
+# baton-mcp CI — lint + typecheck + test.
+#
+# Adapted from baton-console/.github/workflows/ci.yml. The console workflow
+# carries a Postgres service, a generated try-kit paste, a recipe-mcp-v2 leg
+# and a Python version matrix; none of those apply here (no DB, no try-kit,
+# no recipe execution, single supported interpreter 3.11 matching prod's
+# python:3.11-slim). What survives is the uv discipline: pinned uv, locked
+# install, a drift branch that re-resolves upstream, and the same four gates.
+#
+# Three entry points, matching the console's shape so a caller (deploy) can
+# gate on this the same way:
+#   * `pull_request` — full run on every PR.
+#   * `workflow_call`  — a deploy workflow can call this and gate on it.
+#   * `schedule`       — weekly drift check on main.
+#   * `workflow_dispatch` — on-demand, including a manual drift run.
+
+name: CI
+
+on:
+  pull_request:
+  workflow_call:
+  schedule:
+    # Mondays 06:00 UTC. The full matrix, on whatever main holds.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      drift:
+        description: >-
+          Resolve dependencies FRESH instead of from the lock — what the Monday
+          cron does. Exists so that path can be exercised on demand.
+        type: boolean
+        default: false
+
+env:
+  DRIFT: ${{ github.event_name == 'schedule' || inputs.drift }}
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          # Pinned deliberately: uv reads and writes uv.lock's `revision`, so a
+          # floating uv can rewrite the lock into a shape a laptop's uv refuses.
+          version: "0.11.19"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install dependencies (from the LOCK)
+        if: env.DRIFT != 'true'
+        run: uv sync --locked --extra dev --python 3.11
+
+      - name: Install dependencies (RESOLVE FRESH — this is what the cron is FOR)
+        if: env.DRIFT == 'true'
+        run: |
+          uv lock --upgrade
+          git --no-pager diff --stat uv.lock || true
+          uv sync --extra dev --python 3.11
+
+      - name: Lint
+        if: env.DRIFT != 'true'
+        run: uv run --no-sync ruff check src tests
+
+      - name: Format check
+        if: env.DRIFT != 'true'
+        run: uv run --no-sync ruff format --check src tests
+
+      - name: Typecheck
+        run: uv run --no-sync mypy src/baton_mcp
+
+      - name: Test
+        run: uv run --no-sync pytest -q

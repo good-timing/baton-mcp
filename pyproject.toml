@@ -1,0 +1,85 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["baton_mcp*"]
+
+# The vendored OpenAPI spec must ship with the package: prod loads it from
+# the installed copy, never from a live console.
+[tool.setuptools.package-data]
+baton_mcp = ["openapi.json", "py.typed"]
+
+[project]
+name = "baton-mcp"
+version = "0.1.0"
+description = "Open-source MCP server exposing Baton answers to an owner's agent over the Baton HTTP API."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+authors = [{ name = "Good Timing, Inc." }]
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+dependencies = [
+    # Same ceiling discipline as the console's fastmcp pin (backend/pyproject.toml):
+    # a bare floor means CI and any no-lock-file build resolve whatever is newest
+    # at build time while developers sit on what they installed. Major bumps are
+    # decisions, made deliberately against a green suite.
+    "fastmcp>=2.10,<4",
+    "mcp>=1.30,<2",
+    "httpx>=0.25",
+    "pydantic>=2.0",
+    # Baton SDK — instruments baton-mcp's own tools so calls to them emit
+    # friction events (self-measurement), the same way a customer's wrapped
+    # server does. Optional at runtime: with no BATON_DSN / BATON_INSTRUMENT
+    # the install is skipped and the server behaves exactly as if it weren't
+    # there (see baton._optout / BATON_DISABLED=1).
+    "baton-sdk[fastmcp,http]>=0.8.19",
+]
+
+[project.scripts]
+baton-mcp = "baton_mcp.__main__:main"
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.6",
+    "mypy>=1.10",
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "RUF", "T20"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+disallow_untyped_defs = true
+enable_error_code = ["possibly-undefined"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+markers = [
+    # Needs something outside this process: a real port, a real network. The
+    # client tests use httpx.MockTransport, so nothing here needs it yet; the
+    # marker is named so a future real-server test cannot typo into nothing.
+    "integration: drives a real server",
+]
