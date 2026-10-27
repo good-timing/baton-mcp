@@ -8,11 +8,11 @@ result to ``src/baton_mcp/openapi.json``:
 - only paths under ``/v0/metrics/`` are kept (the route maps exclude the rest,
   but vendoring a 87-path spec makes the commit and the tool source slower to
   review than it needs to be);
-- agent-useless facets (``include`` etc., mirroring
-  ``baton_mcp.server.AGENT_USELESS_PARAMS``) are stripped so a refresh cannot
-  reintroduce token-bloat into the tool schemas;
 - keys are sorted recursively (``sort_keys``) and output is pretty-printed, so
   the JSON is diff-stable to the last refresh.
+
+The spec is written as fetched: agent-facing changes belong in ``overlay.json``,
+applied at load time, so a refresh cannot silently drop them.
 
 Deliberately a script (not part of the package): it needs the live console,
 which is exactly what the vendored spec exists to avoid depending on.
@@ -26,7 +26,7 @@ import sys
 
 import httpx
 
-from baton_mcp.server import SPEC_PATH, _strip_agent_useless_params
+from baton_mcp.server import SPEC_PATH
 
 METRICS_PREFIX = "/v0/metrics/"
 
@@ -36,7 +36,7 @@ def prepare_spec(spec: dict[str, object]) -> dict[str, object]:
     paths = spec.get("paths")
     assert isinstance(paths, dict)
     spec["paths"] = {path: ops for path, ops in paths.items() if path.startswith(METRICS_PREFIX)}
-    return _strip_agent_useless_params(spec)
+    return spec
 
 
 def main() -> None:
@@ -57,7 +57,7 @@ def main() -> None:
     SPEC_PATH.write_text(rugged)
     paths = spec.get("paths")
     assert isinstance(paths, dict)
-    print(f"wrote {SPEC_PATH} ({len(paths)} metrics paths, agent-useless params stripped)")  # noqa: T201
+    print(f"wrote {SPEC_PATH} ({len(paths)} metrics paths)")  # noqa: T201
 
 
 if __name__ == "__main__":

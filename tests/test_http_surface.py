@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import json
+
 from starlette.testclient import TestClient
 
 from baton_mcp import __version__
-from baton_mcp.server import _fetch_spec, build_mcp
+from baton_mcp.server import SPEC_PATH, _fetch_spec, build_mcp
 
 
 def _client() -> TestClient:
@@ -40,3 +42,12 @@ def test_fetch_spec_strips_include_facet():
             continue
         params = [p["name"] for op in ops.values() for p in op.get("parameters", [])]
         assert "include" not in params, path
+
+
+def test_vendored_spec_keeps_include_for_the_overlay():
+    spec = json.loads(SPEC_PATH.read_text())
+    for path, ops in spec["paths"].items():
+        if not path.startswith("/v0/metrics/"):
+            continue
+        params = [p["name"] for op in ops.values() for p in op.get("parameters", [])]
+        assert "include" in params, path

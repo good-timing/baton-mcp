@@ -15,8 +15,10 @@ same context the generated tool handlers run in.
 The OpenAPI spec is vendored inside the package (``baton_mcp/openapi.json``,
 refreshed from a local console via ``make refresh-openapi``), so the server
 never depends on a live console being reachable — including in prod, where the
-console disables its docs endpoint. If the vendored file is missing or
-corrupt, the server starts with just ``/health``.
+console disables its docs endpoint. ``overlay.json``, next to the spec, is
+applied before tool generation to tailor the agent-facing surface. If either
+file is missing or corrupt, the server fails to start rather than serving no
+tools.
 """
 
 from __future__ import annotations
@@ -26,11 +28,14 @@ import logging
 import os
 import sys
 from pathlib import Path
+from typing import cast
 
 import httpx
 from fastmcp import FastMCP
 from fastmcp.server.dependencies import get_http_request
 from fastmcp.server.providers.openapi import MCPType, RouteMap
+from oas_patch.file_utils import load_file  # type: ignore[import-untyped]
+from oas_patch.overlay import apply_overlay  # type: ignore[import-untyped]
 from starlette.responses import JSONResponse
 
 from baton_mcp import __version__
@@ -44,10 +49,8 @@ API_TIMEOUT = 30.0
 # installed copying of baton_mcp (not just repository checkouts).
 SPEC_PATH = Path(__file__).resolve().parent / "openapi.json"
 
-# Facets the agent never needs, stripped from the spec before tool generation.
-# `include` adds the per-row signal_ids audit trail to the response — token
-# bloat an owner's agent has no use for.
-AGENT_USELESS_PARAMS = frozenset({"include"})
+# Tailors the vendored spec to the agent-facing surface before tool generation.
+OVERLAY_PATH = SPEC_PATH.with_name("overlay.json")
 
 
 class _AuthInjectingTransport(httpx.AsyncHTTPTransport):
@@ -103,45 +106,33 @@ def _debug_upstream_requests(request: httpx.Request) -> None:
 
 
 def _fetch_spec() -> dict[str, object]:
-    """Load the OpenAPI spec vendored inside the package.
+    """Load the vendored OpenAPI spec and apply the agent-facing overlay.
 
     The spec ships with the package (compile-time, not startup-fetched), so
     the server works identically in dev, CI and prod where the console
-    disables its ``/openapi.json`` endpoint. Agent-useless facets are stripped
-    before tool generation.
+    disables its ``/openapi.json`` endpoint. ``overlay.json``, stored next to
+    the spec, removes facets the agent never needs before tool generation.
 
-    Raises ``RuntimeError`` when the file is missing or unreadable: a server
-    with no tools must not start and look healthy.
+    Raises ``RuntimeError`` when either file is missing or unreadable: a
+    server with no tools must not start and look healthy.
     """
     try:
         raw = SPEC_PATH.read_text()
     except OSError as e:
         raise RuntimeError(f"baton-mcp OpenAPI spec not readable at {SPEC_PATH}: {e}") from e
     try:
-        return _strip_agent_useless_params(json.loads(raw))
+        spec = json.loads(raw)
     except json.JSONDecodeError as e:
         raise RuntimeError(f"baton-mcp OpenAPI spec at {SPEC_PATH} is not valid JSON: {e}") from e
 
-
-def _strip_agent_useless_params(spec: dict[str, object]) -> dict[str, object]:
-    """Drop parameters the agent never needs from exposed operations."""
-    paths = spec.get("paths")
-    if not isinstance(paths, dict):
-        return spec
-    for path, ops in paths.items():
-        if not path.startswith("/v0/metrics/"):
-            continue
-        for op in ops.values():
-            if not isinstance(op, dict):
-                continue
-            params = op.get("parameters")
-            if isinstance(params, list):
-                op["parameters"] = [
-                    p
-                    for p in params
-                    if not (isinstance(p, dict) and p.get("name") in AGENT_USELESS_PARAMS)
-                ]
-    return spec
+    try:
+        overlay = load_file(str(OVERLAY_PATH))
+    except (OSError, ValueError) as e:
+        raise RuntimeError(f"baton-mcp overlay not readable at {OVERLAY_PATH}: {e}") from e
+    try:
+        return cast(dict[str, object], apply_overlay(spec, overlay))
+    except Exception as e:
+        raise RuntimeError(f"baton-mcp overlay at {OVERLAY_PATH} could not be applied: {e}") from e
 
 
 def build_mcp() -> FastMCP:

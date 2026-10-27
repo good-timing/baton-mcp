@@ -60,7 +60,7 @@ ci: lint format-check typecheck test
 
 # Refresh the vendored OpenAPI spec from a locally running baton-console.
 # Run `make dev` in baton-console/ first (uvicorn :8000, docs enabled in dev).
-# The script keeps only /v0/metrics/ paths, strips agent-useless facets, and
-# writes stable (sorted, pretty) JSON so refreshes diff cleanly.
+# The script keeps only /v0/metrics/ paths and writes stable (sorted, pretty)
+# JSON so refreshes diff cleanly. Agent-facing changes live in overlay.json.
 refresh-openapi:
 	$(BIN)/python scripts/refresh_openapi.py
