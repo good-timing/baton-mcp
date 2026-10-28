@@ -9,7 +9,7 @@ PYTHON_VERSION ?= 3.11
 VENV ?= .venv
 BIN = $(VENV)/bin
 
-.PHONY: install dev live-dev test lint format format-check typecheck ci
+.PHONY: install dev live-dev test lint format format-check typecheck fresh-openapi ci
 
 # `--locked` FAILS on a stale lock rather than re-resolving, which is what
 # makes this venv the same tree CI builds. Run `uv lock` here after changing
@@ -55,8 +55,8 @@ format-check:
 	  exit 1; \
 	}
 
-# CI gate — lint + format-check + typecheck + test
-ci: lint format-check typecheck test
+# CI gate — lint + format-check + typecheck + test + spec freshness
+ci: lint format-check typecheck test fresh-openapi
 
 # Refresh the vendored OpenAPI spec from a locally running baton-console.
 # Run `make dev` in baton-console/ first (uvicorn :8000, docs enabled in dev).
@@ -65,3 +65,9 @@ ci: lint format-check typecheck test
 # (sorted, pretty) JSON so refreshes diff cleanly.
 refresh-openapi:
 	$(BIN)/python scripts/refresh_openapi.py
+
+# Fail unless the committed openapi.json is exactly source.openapi.json with
+# overlay.json applied. Applies the overlay in memory and diffs; writes nothing.
+# Fix a failure with `make refresh-openapi` (needs the local console).
+fresh-openapi:
+	$(BIN)/python scripts/refresh_openapi.py --check

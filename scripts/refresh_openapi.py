@@ -16,6 +16,10 @@ Both files are written with sorted, pretty-printed JSON so refreshes diff
 cleanly. Refreshing fails rather than silently writing an unpatched spec when
 the overlay cannot be applied or leaves an agent-useless parameter behind.
 
+``--check`` skips the fetch: it applies ``overlay.json`` to the committed
+``source.openapi.json`` and fails, printing a diff, when ``openapi.json`` is
+not the byte-for-byte result. ``make fresh-openapi`` uses it in CI.
+
 Deliberately a script (not part of the package): it needs the live console,
 which is exactly what the vendored spec exists to avoid depending on.
 """
@@ -23,6 +27,7 @@ which is exactly what the vendored spec exists to avoid depending on.
 from __future__ import annotations
 
 import argparse
+import difflib
 import json
 import sys
 from pathlib import Path
@@ -67,9 +72,46 @@ def apply_agent_overlay(spec: dict[str, object]) -> dict[str, object]:
     return patched
 
 
+def render_spec(spec: dict[str, object]) -> str:
+    return json.dumps(spec, indent=4, sort_keys=True).rstrip("\n") + "\n"
+
+
 def write_spec(path: Path, spec: dict[str, object]) -> None:
-    rugged = json.dumps(spec, indent=4, sort_keys=True).rstrip("\n") + "\n"
-    path.write_text(rugged)
+    path.write_text(render_spec(spec))
+
+
+def check_fresh() -> None:
+    """Fail unless ``openapi.json`` is exactly ``source.openapi.json`` + overlay.
+
+    Never writes. This is what keeps the committed artifact honest in CI: a
+    source or overlay edit that was not followed by ``make refresh-openapi``
+    shows up here as a diff.
+    """
+    try:
+        source = json.loads(SOURCE_PATH.read_text())
+    except OSError as e:
+        sys.exit(f"refresh-openapi: source spec not readable at {SOURCE_PATH}: {e}")
+    except json.JSONDecodeError as e:
+        sys.exit(f"refresh-openapi: source spec at {SOURCE_PATH} is not valid JSON: {e}")
+
+    patched = apply_agent_overlay(source)
+    expected = render_spec(patched)
+
+    try:
+        actual = SPEC_PATH.read_text()
+    except OSError as e:
+        sys.exit(f"refresh-openapi: spec not readable at {SPEC_PATH}: {e}")
+
+    if actual != expected:
+        diff = difflib.unified_diff(
+            actual.splitlines(),
+            expected.splitlines(),
+            fromfile=str(SPEC_PATH),
+            tofile=f"{SPEC_PATH} (source.openapi.json + overlay.json)",
+            lineterm="",
+        )
+        print("\n".join(diff))  # noqa: T201
+        sys.exit("refresh-openapi: openapi.json is stale; run `make refresh-openapi`")
 
 
 def main() -> None:
@@ -79,7 +121,17 @@ def main() -> None:
         default="http://localhost:8000",
         help="console origin to fetch /openapi.json from",
     )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="verify openapi.json matches source.openapi.json + overlay.json; fetch and write nothing",
+    )
     args = parser.parse_args()
+
+    if args.check:
+        check_fresh()
+        print("openapi.json is fresh")  # noqa: T201
+        return
 
     resp = httpx.get(f"{args.base_url.rstrip('/')}/openapi.json", timeout=10.0)
     resp.raise_for_status()
