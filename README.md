@@ -61,7 +61,7 @@ Needs [uv](https://docs.astral.sh/uv/) — it builds the venv from the committed
 ```sh
 make install    # installs in .venv, from uv.lock
 make test       # pytest
-make ci         # lint + format-check + typecheck + test
+make ci         # lint + format-check + typecheck + test + spec freshness
 make dev        # local dev: serve on :8010, MCP tools call local baton-console
 make live-dev   # dev with live prod data, MCP tools call prod API
 ```

@@ -1,0 +1,873 @@
+{
+    "components": {
+        "schemas": {
+            "AgentAnswer": {
+                "description": "An ``Answer`` without its ``signal_ids``.\n\nAn agent cannot use the ids and pays tokens for every one, so the\nagent-facing surfaces return this.",
+                "properties": {
+                    "answer_type": {
+                        "title": "Answer Type",
+                        "type": "string"
+                    },
+                    "computed_at": {
+                        "format": "date-time",
+                        "title": "Computed At",
+                        "type": "string"
+                    },
+                    "embedding_available": {
+                        "title": "Embedding Available",
+                        "type": "boolean"
+                    },
+                    "headline": {
+                        "title": "Headline",
+                        "type": "string"
+                    },
+                    "n_sessions": {
+                        "title": "N Sessions",
+                        "type": "integer"
+                    },
+                    "n_signals": {
+                        "title": "N Signals",
+                        "type": "integer"
+                    },
+                    "rows": {
+                        "items": {
+                            "$ref": "#/components/schemas/AgentAnswerRow"
+                        },
+                        "title": "Rows",
+                        "type": "array"
+                    }
+                },
+                "required": [
+                    "answer_type",
+                    "headline",
+                    "rows",
+                    "n_signals",
+                    "n_sessions",
+                    "embedding_available",
+                    "computed_at"
+                ],
+                "title": "AgentAnswer",
+                "type": "object"
+            },
+            "AgentAnswerRow": {
+                "description": "A ranked row: the entity and its metric, without the ids behind it.",
+                "properties": {
+                    "label": {
+                        "title": "Label",
+                        "type": "string"
+                    },
+                    "value": {
+                        "title": "Value",
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "label",
+                    "value"
+                ],
+                "title": "AgentAnswerRow",
+                "type": "object"
+            },
+            "Body_fix_prompt_generate_dashboard__ws___srv__fix_prompt__card_kind___fingerprint___tool__post": {
+                "properties": {
+                    "regenerate": {
+                        "default": "",
+                        "title": "Regenerate",
+                        "type": "string"
+                    }
+                },
+                "title": "Body_fix_prompt_generate_dashboard__ws___srv__fix_prompt__card_kind___fingerprint___tool__post",
+                "type": "object"
+            },
+            "Body_new_issue_severity_dashboard__ws___srv__issues__token__severity_post": {
+                "properties": {
+                    "next": {
+                        "default": "",
+                        "title": "Next",
+                        "type": "string"
+                    },
+                    "rule": {
+                        "title": "Rule",
+                        "type": "string"
+                    },
+                    "severity": {
+                        "title": "Severity",
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "severity",
+                    "rule"
+                ],
+                "title": "Body_new_issue_severity_dashboard__ws___srv__issues__token__severity_post",
+                "type": "object"
+            },
+            "Body_new_issue_status_dashboard__ws___srv__issues__token__status_post": {
+                "properties": {
+                    "next": {
+                        "default": "",
+                        "title": "Next",
+                        "type": "string"
+                    },
+                    "status": {
+                        "title": "Status",
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "status"
+                ],
+                "title": "Body_new_issue_status_dashboard__ws___srv__issues__token__status_post",
+                "type": "object"
+            },
+            "Body_new_request_status_dashboard__ws___srv__requests__request_ref__status_post": {
+                "properties": {
+                    "next": {
+                        "default": "",
+                        "title": "Next",
+                        "type": "string"
+                    },
+                    "status": {
+                        "title": "Status",
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "status"
+                ],
+                "title": "Body_new_request_status_dashboard__ws___srv__requests__request_ref__status_post",
+                "type": "object"
+            },
+            "Body_scoped_turn_flag_dashboard__ws___srv__turns__event_ref__flag_post": {
+                "properties": {
+                    "next": {
+                        "default": "",
+                        "title": "Next",
+                        "type": "string"
+                    }
+                },
+                "title": "Body_scoped_turn_flag_dashboard__ws___srv__turns__event_ref__flag_post",
+                "type": "object"
+            },
+            "Body_scoped_turn_strike_dashboard__ws___srv__turns__event_ref__strike_post": {
+                "properties": {
+                    "next": {
+                        "default": "",
+                        "title": "Next",
+                        "type": "string"
+                    },
+                    "reason": {
+                        "default": "",
+                        "title": "Reason",
+                        "type": "string"
+                    }
+                },
+                "title": "Body_scoped_turn_strike_dashboard__ws___srv__turns__event_ref__strike_post",
+                "type": "object"
+            },
+            "Body_scoped_turn_unflag_dashboard__ws___srv__turns__event_ref__unflag_post": {
+                "properties": {
+                    "next": {
+                        "default": "",
+                        "title": "Next",
+                        "type": "string"
+                    }
+                },
+                "title": "Body_scoped_turn_unflag_dashboard__ws___srv__turns__event_ref__unflag_post",
+                "type": "object"
+            },
+            "Body_scoped_turn_unstrike_dashboard__ws___srv__turns__event_ref__unstrike_post": {
+                "properties": {
+                    "next": {
+                        "default": "",
+                        "title": "Next",
+                        "type": "string"
+                    }
+                },
+                "title": "Body_scoped_turn_unstrike_dashboard__ws___srv__turns__event_ref__unstrike_post",
+                "type": "object"
+            },
+            "Body_task_explain_write_dashboard__ws___srv__task_explain__session_id___ordinal__post": {
+                "properties": {
+                    "regenerate": {
+                        "default": "",
+                        "title": "Regenerate",
+                        "type": "string"
+                    }
+                },
+                "title": "Body_task_explain_write_dashboard__ws___srv__task_explain__session_id___ordinal__post",
+                "type": "object"
+            },
+            "HTTPValidationError": {
+                "properties": {
+                    "detail": {
+                        "items": {
+                            "$ref": "#/components/schemas/ValidationError"
+                        },
+                        "title": "Detail",
+                        "type": "array"
+                    }
+                },
+                "title": "HTTPValidationError",
+                "type": "object"
+            },
+            "IncomingEvent": {
+                "additionalProperties": false,
+                "description": "SDK-emitted event envelope. Single event per POST.\n\n``payload`` stays as a plain dict on this side of the wire \u2014 the\nConsole stores it as JSONB and lets the worker parse per-event-type\nwhen it stitches signals.",
+                "properties": {
+                    "agent_runtime": {
+                        "title": "Agent Runtime",
+                        "type": "string"
+                    },
+                    "call_id": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Call Id"
+                    },
+                    "captured_at": {
+                        "format": "date-time",
+                        "title": "Captured At",
+                        "type": "string"
+                    },
+                    "client_observed": {
+                        "anyOf": [
+                            {
+                                "additionalProperties": true,
+                                "type": "object"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Client Observed"
+                    },
+                    "consent_token": {
+                        "title": "Consent Token",
+                        "type": "string"
+                    },
+                    "event_id": {
+                        "format": "uuid",
+                        "title": "Event Id",
+                        "type": "string"
+                    },
+                    "event_type": {
+                        "enum": [
+                            "tool_call_start",
+                            "tool_call_end",
+                            "tool_call_error",
+                            "annotation",
+                            "resource_list_start",
+                            "resource_list_end",
+                            "resource_list_error",
+                            "resource_read_start",
+                            "resource_read_end",
+                            "resource_read_error",
+                            "prompt_list_start",
+                            "prompt_list_end",
+                            "prompt_list_error",
+                            "prompt_get_start",
+                            "prompt_get_end",
+                            "prompt_get_error",
+                            "tool_list_start",
+                            "tool_list_end",
+                            "tool_list_error",
+                            "surface_snapshot"
+                        ],
+                        "title": "Event Type",
+                        "type": "string"
+                    },
+                    "payload": {
+                        "additionalProperties": true,
+                        "title": "Payload",
+                        "type": "object"
+                    },
+                    "principal": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/PrincipalWire"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "principal_id": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Principal Id"
+                    },
+                    "runtime_meta": {
+                        "anyOf": [
+                            {
+                                "additionalProperties": true,
+                                "type": "object"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Runtime Meta"
+                    },
+                    "sdk_version": {
+                        "title": "Sdk Version",
+                        "type": "string"
+                    },
+                    "sequence_number": {
+                        "minimum": 0.0,
+                        "title": "Sequence Number",
+                        "type": "integer"
+                    },
+                    "session_id": {
+                        "title": "Session Id",
+                        "type": "string"
+                    },
+                    "session_id_origin": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Session Id Origin"
+                    },
+                    "spec_version": {
+                        "default": "0.1",
+                        "title": "Spec Version",
+                        "type": "string"
+                    },
+                    "tenant_id": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Tenant Id"
+                    },
+                    "transport_observed": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Transport Observed"
+                    },
+                    "vendor_id": {
+                        "title": "Vendor Id",
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "event_id",
+                    "vendor_id",
+                    "session_id",
+                    "sequence_number",
+                    "event_type",
+                    "sdk_version",
+                    "agent_runtime",
+                    "captured_at",
+                    "consent_token",
+                    "payload"
+                ],
+                "title": "IncomingEvent",
+                "type": "object"
+            },
+            "PrincipalWire": {
+                "additionalProperties": false,
+                "description": "SPEC \u00a711.4: who the vendor resolved behind the call, as ONE value.\n\n``id`` alone is not safe to read. Whether it is a pseudonym or a real\nname is not a fact *about* the value a consumer can look up later \u2014 it is\npart of what the value MEANS. The three members travel together so there\nis no conformant event carrying an ``id`` whose classification a reader\nhas to guess, which is why all three are REQUIRED here: a partial object\nis malformed, not a degraded reading. To say nobody was resolved, omit\n``principal`` entirely.\n\n\u26a0 **``source`` and ``form`` are plain ``str``, deliberately NOT\n``Literal``** \u2014 the same argument ``transport_observed`` records below. A\n422 drops the WHOLE event and the SDK discards a non-429 4xx without\nreading the body, so one unrecognised value would cost the call's\n``call_id`` too. SPEC \u00a711.4 states both consumer rules the safe way round\n(trust only ``attested``; treat anything but ``hashed`` as personal data),\nso an unknown value already fails safe downstream \u2014 and that is what makes\na fourth source, alias-derived, free to add later.\n\n``extra=\"forbid\"`` matches the envelope's: a new MEMBER lands here before\na producer emits it, the same ordering that governs new fields.",
+                "properties": {
+                    "display_name": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Display Name"
+                    },
+                    "form": {
+                        "minLength": 1,
+                        "title": "Form",
+                        "type": "string"
+                    },
+                    "id": {
+                        "minLength": 1,
+                        "title": "Id",
+                        "type": "string"
+                    },
+                    "source": {
+                        "minLength": 1,
+                        "title": "Source",
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "source",
+                    "form"
+                ],
+                "title": "PrincipalWire",
+                "type": "object"
+            },
+            "ValidationError": {
+                "properties": {
+                    "ctx": {
+                        "title": "Context",
+                        "type": "object"
+                    },
+                    "input": {
+                        "title": "Input"
+                    },
+                    "loc": {
+                        "items": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ]
+                        },
+                        "title": "Location",
+                        "type": "array"
+                    },
+                    "msg": {
+                        "title": "Message",
+                        "type": "string"
+                    },
+                    "type": {
+                        "title": "Error Type",
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "loc",
+                    "msg",
+                    "type"
+                ],
+                "title": "ValidationError",
+                "type": "object"
+            }
+        },
+        "securitySchemes": {
+            "BearerApiKey": {
+                "description": "'Bearer <your API key>'.",
+                "in": "header",
+                "name": "Authorization",
+                "type": "apiKey"
+            },
+            "TenantId": {
+                "description": "Auth key: the tenant identifier the Bearer token belongs to.",
+                "in": "header",
+                "name": "x-baton-tenant-id",
+                "type": "apiKey"
+            }
+        }
+    },
+    "info": {
+        "title": "Good Timing Console \u2014 ingest",
+        "version": "0.1.0"
+    },
+    "openapi": "3.1.0",
+    "paths": {
+        "/v0/metrics/demand_intents": {
+            "get": {
+                "description": "What agents arrive to do on a vendor, ranked by distinct sessions.",
+                "operationId": "demand_intents",
+                "parameters": [
+                    {
+                        "description": "The vendor surface being asked about (a facet, not the tenant scope).",
+                        "in": "query",
+                        "name": "vendor_id",
+                        "required": true,
+                        "schema": {
+                            "description": "The vendor surface being asked about (a facet, not the tenant scope).",
+                            "title": "Vendor Id",
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Extra fields to return. 'signal_ids' adds, per row and in total, the ids of the signals behind each count. An agent does not need them.",
+                        "in": "query",
+                        "name": "include",
+                        "required": false,
+                        "schema": {
+                            "description": "Extra fields to return. 'signal_ids' adds, per row and in total, the ids of the signals behind each count. An agent does not need them.",
+                            "items": {
+                                "const": "signal_ids",
+                                "type": "string"
+                            },
+                            "title": "Include",
+                            "type": "array"
+                        }
+                    },
+                    {
+                        "description": "Window on captured_at, in days back from now. Omit for all-time.",
+                        "in": "query",
+                        "name": "window_days",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "exclusiveMinimum": 0,
+                                    "type": "integer"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Window on captured_at, in days back from now. Omit for all-time.",
+                            "title": "Window Days"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AgentAnswer"
+                                }
+                            }
+                        },
+                        "description": "Successful Response"
+                    },
+                    "422": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        },
+                        "description": "Validation Error"
+                    }
+                },
+                "security": [
+                    {
+                        "TenantId": []
+                    },
+                    {
+                        "BearerApiKey": []
+                    }
+                ],
+                "summary": "Demand Intents",
+                "tags": [
+                    "metrics"
+                ]
+            }
+        },
+        "/v0/metrics/failure_modes_for_tool": {
+            "get": {
+                "description": "Distinct ways one tool fails, semantically clustered.",
+                "operationId": "failure_modes_for_tool",
+                "parameters": [
+                    {
+                        "description": "The vendor surface being asked about (a facet, not the tenant scope).",
+                        "in": "query",
+                        "name": "vendor_id",
+                        "required": true,
+                        "schema": {
+                            "description": "The vendor surface being asked about (a facet, not the tenant scope).",
+                            "title": "Vendor Id",
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "The tool whose distinct failure modes to cluster.",
+                        "in": "query",
+                        "name": "tool_name",
+                        "required": true,
+                        "schema": {
+                            "description": "The tool whose distinct failure modes to cluster.",
+                            "title": "Tool Name",
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Extra fields to return. 'signal_ids' adds, per row and in total, the ids of the signals behind each count. An agent does not need them.",
+                        "in": "query",
+                        "name": "include",
+                        "required": false,
+                        "schema": {
+                            "description": "Extra fields to return. 'signal_ids' adds, per row and in total, the ids of the signals behind each count. An agent does not need them.",
+                            "items": {
+                                "const": "signal_ids",
+                                "type": "string"
+                            },
+                            "title": "Include",
+                            "type": "array"
+                        }
+                    },
+                    {
+                        "description": "Window on captured_at, in days back from now. Omit for all-time.",
+                        "in": "query",
+                        "name": "window_days",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "exclusiveMinimum": 0,
+                                    "type": "integer"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Window on captured_at, in days back from now. Omit for all-time.",
+                            "title": "Window Days"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AgentAnswer"
+                                }
+                            }
+                        },
+                        "description": "Successful Response"
+                    },
+                    "422": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        },
+                        "description": "Validation Error"
+                    }
+                },
+                "security": [
+                    {
+                        "TenantId": []
+                    },
+                    {
+                        "BearerApiKey": []
+                    }
+                ],
+                "summary": "Failure Modes For Tool",
+                "tags": [
+                    "metrics"
+                ]
+            }
+        },
+        "/v0/metrics/top_friction_by_tool": {
+            "get": {
+                "description": "Top friction on a vendor, ranked by distinct sessions per tool.",
+                "operationId": "top_friction_by_tool",
+                "parameters": [
+                    {
+                        "description": "The vendor surface being asked about (a facet, not the tenant scope).",
+                        "in": "query",
+                        "name": "vendor_id",
+                        "required": true,
+                        "schema": {
+                            "description": "The vendor surface being asked about (a facet, not the tenant scope).",
+                            "title": "Vendor Id",
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Extra fields to return. 'signal_ids' adds, per row and in total, the ids of the signals behind each count. An agent does not need them.",
+                        "in": "query",
+                        "name": "include",
+                        "required": false,
+                        "schema": {
+                            "description": "Extra fields to return. 'signal_ids' adds, per row and in total, the ids of the signals behind each count. An agent does not need them.",
+                            "items": {
+                                "const": "signal_ids",
+                                "type": "string"
+                            },
+                            "title": "Include",
+                            "type": "array"
+                        }
+                    },
+                    {
+                        "description": "Window on captured_at, in days back from now. Omit for all-time.",
+                        "in": "query",
+                        "name": "window_days",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "exclusiveMinimum": 0,
+                                    "type": "integer"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Window on captured_at, in days back from now. Omit for all-time.",
+                            "title": "Window Days"
+                        }
+                    },
+                    {
+                        "description": "Narrow to one signal_type (e.g. 'failure').",
+                        "in": "query",
+                        "name": "signal_type",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Narrow to one signal_type (e.g. 'failure').",
+                            "title": "Signal Type"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AgentAnswer"
+                                }
+                            }
+                        },
+                        "description": "Successful Response"
+                    },
+                    "422": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        },
+                        "description": "Validation Error"
+                    }
+                },
+                "security": [
+                    {
+                        "TenantId": []
+                    },
+                    {
+                        "BearerApiKey": []
+                    }
+                ],
+                "summary": "Top Friction By Tool",
+                "tags": [
+                    "metrics"
+                ]
+            }
+        },
+        "/v0/metrics/top_gaps_clustered": {
+            "get": {
+                "description": "Capability gaps agents ask a vendor to build, semantically clustered.",
+                "operationId": "top_gaps_clustered",
+                "parameters": [
+                    {
+                        "description": "The vendor surface being asked about (a facet, not the tenant scope).",
+                        "in": "query",
+                        "name": "vendor_id",
+                        "required": true,
+                        "schema": {
+                            "description": "The vendor surface being asked about (a facet, not the tenant scope).",
+                            "title": "Vendor Id",
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Extra fields to return. 'signal_ids' adds, per row and in total, the ids of the signals behind each count. An agent does not need them.",
+                        "in": "query",
+                        "name": "include",
+                        "required": false,
+                        "schema": {
+                            "description": "Extra fields to return. 'signal_ids' adds, per row and in total, the ids of the signals behind each count. An agent does not need them.",
+                            "items": {
+                                "const": "signal_ids",
+                                "type": "string"
+                            },
+                            "title": "Include",
+                            "type": "array"
+                        }
+                    },
+                    {
+                        "description": "Window on captured_at, in days back from now. Omit for all-time.",
+                        "in": "query",
+                        "name": "window_days",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "exclusiveMinimum": 0,
+                                    "type": "integer"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Window on captured_at, in days back from now. Omit for all-time.",
+                            "title": "Window Days"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AgentAnswer"
+                                }
+                            }
+                        },
+                        "description": "Successful Response"
+                    },
+                    "422": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        },
+                        "description": "Validation Error"
+                    }
+                },
+                "security": [
+                    {
+                        "TenantId": []
+                    },
+                    {
+                        "BearerApiKey": []
+                    }
+                ],
+                "summary": "Top Gaps Clustered",
+                "tags": [
+                    "metrics"
+                ]
+            }
+        }
+    }
+}

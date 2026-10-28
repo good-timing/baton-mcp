@@ -41,7 +41,7 @@ dependencies = [
     # server does. Optional at runtime: with no BATON_DSN / BATON_INSTRUMENT
     # the install is skipped and the server behaves exactly as if it weren't
     # there (see baton._optout / BATON_DISABLED=1).
-    "baton-sdk[fastmcp,http]>=0.8.19",
+    "baton-sdk[fastmcp,http]>=0.8.21",
 ]
 
 [project.scripts]
@@ -53,6 +53,9 @@ dev = [
     "mypy>=1.10",
     "pytest>=7.0",
     "pytest-asyncio>=0.21",
+    # `make refresh-openapi` applies overlay.json to the fetched spec. Runtime
+    # only ever sees the already-patched openapi.json.
+    "oas-patch>=0.3.4,<0.4",
 ]
 
 [tool.ruff]
