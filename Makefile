@@ -39,10 +39,10 @@ test:
 	$(BIN)/pytest -q
 
 lint:
-	$(BIN)/ruff check src tests
+	$(BIN)/ruff check src tests scripts
 
 format:
-	$(BIN)/ruff format src tests
+	$(BIN)/ruff format src tests scripts
 
 typecheck:
 	$(BIN)/mypy src/baton_mcp
@@ -50,7 +50,7 @@ typecheck:
 # Names the fix. ruff's own output says which files differ but never that
 # `make format` exists — the most common way `make ci` fails mid-edit.
 format-check:
-	@$(BIN)/ruff format --check src tests || { \
+	@$(BIN)/ruff format --check src tests scripts || { \
 	  printf '\n  ^ formatting differs. Fix with:\n\n      make format\n\n  then re-run.\n\n'; \
 	  exit 1; \
 	}

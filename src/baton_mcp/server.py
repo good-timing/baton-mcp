@@ -27,7 +27,6 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import cast
 
 import httpx
 from fastmcp import FastMCP
@@ -115,9 +114,12 @@ def _fetch_spec() -> dict[str, object]:
     except OSError as e:
         raise RuntimeError(f"baton-mcp OpenAPI spec not readable at {SPEC_PATH}: {e}") from e
     try:
-        return cast(dict[str, object], json.loads(raw))
+        spec = json.loads(raw)
     except json.JSONDecodeError as e:
         raise RuntimeError(f"baton-mcp OpenAPI spec at {SPEC_PATH} is not valid JSON: {e}") from e
+    if not isinstance(spec, dict):
+        raise RuntimeError(f"baton-mcp OpenAPI spec at {SPEC_PATH} is not a JSON object")
+    return spec
 
 
 def build_mcp() -> FastMCP:

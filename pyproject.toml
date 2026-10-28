@@ -41,7 +41,7 @@ dependencies = [
     # server does. Optional at runtime: with no BATON_DSN / BATON_INSTRUMENT
     # the install is skipped and the server behaves exactly as if it weren't
     # there (see baton._optout / BATON_DISABLED=1).
-    "baton-sdk[fastmcp,http]>=0.8.20",
+    "baton-sdk[fastmcp,http]>=0.8.21",
 ]
 
 [project.scripts]

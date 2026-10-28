@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 
+import pytest
 from starlette.testclient import TestClient
 
 from baton_mcp import __version__
@@ -46,13 +47,12 @@ def test_fetch_spec_strips_include_facet():
         assert "include" not in params, path
 
 
-def test_vendored_spec_is_already_overlay_patched():
-    spec = json.loads(SPEC_PATH.read_text())
-    for path, ops in spec["paths"].items():
-        if not path.startswith("/v0/metrics/"):
-            continue
-        params = [p["name"] for op in ops.values() for p in op.get("parameters", [])]
-        assert "include" not in params, path
+def test_fetch_spec_rejects_non_object_json(tmp_path, monkeypatch):
+    spec_path = tmp_path / "openapi.json"
+    spec_path.write_text("[]")
+    monkeypatch.setattr("baton_mcp.server.SPEC_PATH", spec_path)
+    with pytest.raises(RuntimeError, match="is not a JSON object"):
+        _fetch_spec()
 
 
 def test_source_spec_keeps_include_for_the_overlay():

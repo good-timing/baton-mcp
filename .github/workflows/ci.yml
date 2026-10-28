@@ -1,11 +1,12 @@
-# baton-mcp CI — lint + typecheck + test.
+# baton-mcp CI — lint + format + typecheck + test + spec freshness.
 #
 # Adapted from baton-console/.github/workflows/ci.yml. The console workflow
 # carries a Postgres service, a generated try-kit paste, a recipe-mcp-v2 leg
 # and a Python version matrix; none of those apply here (no DB, no try-kit,
 # no recipe execution, single supported interpreter 3.11 matching prod's
 # python:3.11-slim). What survives is the uv discipline: pinned uv, locked
-# install, a drift branch that re-resolves upstream, and the same four gates.
+# install, a drift branch that re-resolves upstream, and the same gates, plus
+# a check that the committed OpenAPI spec matches its source and overlay.
 #
 # Three entry points, matching the console's shape so a caller (deploy) can
 # gate on this the same way:
@@ -65,14 +66,19 @@ jobs:
 
       - name: Lint
         if: env.DRIFT != 'true'
-        run: uv run --no-sync ruff check src tests
+        run: uv run --no-sync ruff check src tests scripts
 
       - name: Format check
         if: env.DRIFT != 'true'
-        run: uv run --no-sync ruff format --check src tests
+        run: uv run --no-sync ruff format --check src tests scripts
 
       - name: Typecheck
         run: uv run --no-sync mypy src/baton_mcp
 
       - name: Test
         run: uv run --no-sync pytest -q
+
+      # Mirrors `make fresh-openapi`: applies overlay.json to
+      # source.openapi.json in memory and fails if openapi.json differs.
+      - name: Spec freshness
+        run: uv run --no-sync python scripts/refresh_openapi.py --check
