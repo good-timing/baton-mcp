@@ -9,7 +9,7 @@ include = ["baton_mcp*"]
 # The vendored OpenAPI spec must ship with the package: prod loads it from
 # the installed copy, never from a live console.
 [tool.setuptools.package-data]
-baton_mcp = ["openapi.json", "overlay.json", "py.typed"]
+baton_mcp = ["openapi.json", "py.typed"]
 
 [project]
 name = "baton-mcp"
@@ -36,9 +36,6 @@ dependencies = [
     "mcp>=1.30,<2",
     "httpx>=0.25",
     "pydantic>=2.0",
-    # Applies the OpenAPI overlay (overlay.json) to the vendored spec before
-    # tool generation.
-    "oas-patch>=0.3.4,<0.4",
     # Baton SDK — instruments baton-mcp's own tools so calls to them emit
     # friction events (self-measurement), the same way a customer's wrapped
     # server does. Optional at runtime: with no BATON_DSN / BATON_INSTRUMENT
@@ -56,6 +53,9 @@ dev = [
     "mypy>=1.10",
     "pytest>=7.0",
     "pytest-asyncio>=0.21",
+    # `make refresh-openapi` applies overlay.json to the fetched spec. Runtime
+    # only ever sees the already-patched openapi.json.
+    "oas-patch>=0.3.4,<0.4",
 ]
 
 [tool.ruff]

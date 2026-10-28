@@ -509,21 +509,6 @@
                         }
                     },
                     {
-                        "description": "Extra fields to return. 'signal_ids' adds, per row and in total, the ids of the signals behind each count. An agent does not need them.",
-                        "in": "query",
-                        "name": "include",
-                        "required": false,
-                        "schema": {
-                            "description": "Extra fields to return. 'signal_ids' adds, per row and in total, the ids of the signals behind each count. An agent does not need them.",
-                            "items": {
-                                "const": "signal_ids",
-                                "type": "string"
-                            },
-                            "title": "Include",
-                            "type": "array"
-                        }
-                    },
-                    {
                         "description": "Window on captured_at, in days back from now. Omit for all-time.",
                         "in": "query",
                         "name": "window_days",
@@ -607,21 +592,6 @@
                         }
                     },
                     {
-                        "description": "Extra fields to return. 'signal_ids' adds, per row and in total, the ids of the signals behind each count. An agent does not need them.",
-                        "in": "query",
-                        "name": "include",
-                        "required": false,
-                        "schema": {
-                            "description": "Extra fields to return. 'signal_ids' adds, per row and in total, the ids of the signals behind each count. An agent does not need them.",
-                            "items": {
-                                "const": "signal_ids",
-                                "type": "string"
-                            },
-                            "title": "Include",
-                            "type": "array"
-                        }
-                    },
-                    {
                         "description": "Window on captured_at, in days back from now. Omit for all-time.",
                         "in": "query",
                         "name": "window_days",
@@ -691,21 +661,6 @@
                             "description": "The vendor surface being asked about (a facet, not the tenant scope).",
                             "title": "Vendor Id",
                             "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Extra fields to return. 'signal_ids' adds, per row and in total, the ids of the signals behind each count. An agent does not need them.",
-                        "in": "query",
-                        "name": "include",
-                        "required": false,
-                        "schema": {
-                            "description": "Extra fields to return. 'signal_ids' adds, per row and in total, the ids of the signals behind each count. An agent does not need them.",
-                            "items": {
-                                "const": "signal_ids",
-                                "type": "string"
-                            },
-                            "title": "Include",
-                            "type": "array"
                         }
                     },
                     {
@@ -796,21 +751,6 @@
                             "description": "The vendor surface being asked about (a facet, not the tenant scope).",
                             "title": "Vendor Id",
                             "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Extra fields to return. 'signal_ids' adds, per row and in total, the ids of the signals behind each count. An agent does not need them.",
-                        "in": "query",
-                        "name": "include",
-                        "required": false,
-                        "schema": {
-                            "description": "Extra fields to return. 'signal_ids' adds, per row and in total, the ids of the signals behind each count. An agent does not need them.",
-                            "items": {
-                                "const": "signal_ids",
-                                "type": "string"
-                            },
-                            "title": "Include",
-                            "type": "array"
                         }
                     },
                     {

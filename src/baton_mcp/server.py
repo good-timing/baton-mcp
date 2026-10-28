@@ -15,10 +15,9 @@ same context the generated tool handlers run in.
 The OpenAPI spec is vendored inside the package (``baton_mcp/openapi.json``,
 refreshed from a local console via ``make refresh-openapi``), so the server
 never depends on a live console being reachable — including in prod, where the
-console disables its docs endpoint. ``overlay.json``, next to the spec, is
-applied before tool generation to tailor the agent-facing surface. If either
-file is missing or corrupt, the server fails to start rather than serving no
-tools.
+console disables its docs endpoint. ``make refresh-openapi`` applies
+``overlay.json`` and writes the result there. If the file is missing or
+corrupt, the server fails to start rather than serving no tools.
 """
 
 from __future__ import annotations
@@ -34,8 +33,6 @@ import httpx
 from fastmcp import FastMCP
 from fastmcp.server.dependencies import get_http_request
 from fastmcp.server.providers.openapi import MCPType, RouteMap
-from oas_patch.file_utils import load_file  # type: ignore[import-untyped]
-from oas_patch.overlay import apply_overlay  # type: ignore[import-untyped]
 from starlette.responses import JSONResponse
 
 from baton_mcp import __version__
@@ -48,9 +45,6 @@ API_TIMEOUT = 30.0
 # The vendored spec lives inside the package, so it ships with any wheel /
 # installed copying of baton_mcp (not just repository checkouts).
 SPEC_PATH = Path(__file__).resolve().parent / "openapi.json"
-
-# Tailors the vendored spec to the agent-facing surface before tool generation.
-OVERLAY_PATH = SPEC_PATH.with_name("overlay.json")
 
 
 class _AuthInjectingTransport(httpx.AsyncHTTPTransport):
@@ -106,33 +100,24 @@ def _debug_upstream_requests(request: httpx.Request) -> None:
 
 
 def _fetch_spec() -> dict[str, object]:
-    """Load the vendored OpenAPI spec and apply the agent-facing overlay.
+    """Load the OpenAPI spec vendored inside the package.
 
     The spec ships with the package (compile-time, not startup-fetched), so
     the server works identically in dev, CI and prod where the console
-    disables its ``/openapi.json`` endpoint. ``overlay.json``, stored next to
-    the spec, removes facets the agent never needs before tool generation.
+    disables its ``/openapi.json`` endpoint. The overlay is applied when the
+    spec is refreshed, not here.
 
-    Raises ``RuntimeError`` when either file is missing or unreadable: a
-    server with no tools must not start and look healthy.
+    Raises ``RuntimeError`` when the file is missing or unreadable: a server
+    with no tools must not start and look healthy.
     """
     try:
         raw = SPEC_PATH.read_text()
     except OSError as e:
         raise RuntimeError(f"baton-mcp OpenAPI spec not readable at {SPEC_PATH}: {e}") from e
     try:
-        spec = json.loads(raw)
+        return cast(dict[str, object], json.loads(raw))
     except json.JSONDecodeError as e:
         raise RuntimeError(f"baton-mcp OpenAPI spec at {SPEC_PATH} is not valid JSON: {e}") from e
-
-    try:
-        overlay = load_file(str(OVERLAY_PATH))
-    except (OSError, ValueError) as e:
-        raise RuntimeError(f"baton-mcp overlay not readable at {OVERLAY_PATH}: {e}") from e
-    try:
-        return cast(dict[str, object], apply_overlay(spec, overlay))
-    except Exception as e:
-        raise RuntimeError(f"baton-mcp overlay at {OVERLAY_PATH} could not be applied: {e}") from e
 
 
 def build_mcp() -> FastMCP:

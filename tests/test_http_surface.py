@@ -9,6 +9,8 @@ from starlette.testclient import TestClient
 from baton_mcp import __version__
 from baton_mcp.server import SPEC_PATH, _fetch_spec, build_mcp
 
+SOURCE_PATH = SPEC_PATH.with_name("source.openapi.json")
+
 
 def _client() -> TestClient:
     return TestClient(build_mcp().http_app())
@@ -44,8 +46,17 @@ def test_fetch_spec_strips_include_facet():
         assert "include" not in params, path
 
 
-def test_vendored_spec_keeps_include_for_the_overlay():
+def test_vendored_spec_is_already_overlay_patched():
     spec = json.loads(SPEC_PATH.read_text())
+    for path, ops in spec["paths"].items():
+        if not path.startswith("/v0/metrics/"):
+            continue
+        params = [p["name"] for op in ops.values() for p in op.get("parameters", [])]
+        assert "include" not in params, path
+
+
+def test_source_spec_keeps_include_for_the_overlay():
+    spec = json.loads(SOURCE_PATH.read_text())
     for path, ops in spec["paths"].items():
         if not path.startswith("/v0/metrics/"):
             continue

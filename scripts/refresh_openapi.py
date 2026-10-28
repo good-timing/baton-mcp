@@ -2,17 +2,19 @@
 
 Fetches ``/openapi.json`` from the console named by ``--base-url`` (default
 ``http://localhost:8000`` — start the console first, e.g. ``make dev`` there),
-reduces it to exactly what ``FastMCP.from_openapi`` consumes, and writes the
-result to ``src/baton_mcp/openapi.json``:
+reduces it to exactly what ``FastMCP.from_openapi`` consumes, and writes two
+files under ``src/baton_mcp/``:
 
-- only paths under ``/v0/metrics/`` are kept (the route maps exclude the rest,
-  but vendoring a 87-path spec makes the commit and the tool source slower to
-  review than it needs to be);
-- keys are sorted recursively (``sort_keys``) and output is pretty-printed, so
-  the JSON is diff-stable to the last refresh.
+- ``source.openapi.json``: the fetched spec with only paths under
+  ``/v0/metrics/`` kept (the route maps exclude the rest, but vendoring a
+  87-path spec makes the commit and the tool source slower to review than it
+  needs to be);
+- ``openapi.json``: ``source.openapi.json`` with ``overlay.json`` applied.
+  This is the file the server ships and loads at startup.
 
-The spec is written as fetched: agent-facing changes belong in ``overlay.json``,
-applied at load time, so a refresh cannot silently drop them.
+Both files are written with sorted, pretty-printed JSON so refreshes diff
+cleanly. Refreshing fails rather than silently writing an unpatched spec when
+the overlay cannot be applied or leaves an agent-useless parameter behind.
 
 Deliberately a script (not part of the package): it needs the live console,
 which is exactly what the vendored spec exists to avoid depending on.
@@ -23,12 +25,20 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from pathlib import Path
 
 import httpx
+from oas_patch.file_utils import load_file  # type: ignore[import-untyped]
+from oas_patch.overlay import apply_overlay  # type: ignore[import-untyped]
 
 from baton_mcp.server import SPEC_PATH
 
 METRICS_PREFIX = "/v0/metrics/"
+
+# Written next to the shipped spec: the pre-overlay source and the overlay that
+# turns it into the agent-facing surface.
+SOURCE_PATH = SPEC_PATH.with_name("source.openapi.json")
+OVERLAY_PATH = SPEC_PATH.with_name("overlay.json")
 
 
 def prepare_spec(spec: dict[str, object]) -> dict[str, object]:
@@ -37,6 +47,29 @@ def prepare_spec(spec: dict[str, object]) -> dict[str, object]:
     assert isinstance(paths, dict)
     spec["paths"] = {path: ops for path, ops in paths.items() if path.startswith(METRICS_PREFIX)}
     return spec
+
+
+def apply_agent_overlay(spec: dict[str, object]) -> dict[str, object]:
+    """Apply ``overlay.json`` and verify the agent-facing surface it produces."""
+    try:
+        overlay = load_file(str(OVERLAY_PATH))
+    except (OSError, ValueError) as e:
+        sys.exit(f"refresh-openapi: overlay not readable at {OVERLAY_PATH}: {e}")
+    try:
+        patched = apply_overlay(spec, overlay)
+    except Exception as e:
+        sys.exit(f"refresh-openapi: overlay at {OVERLAY_PATH} could not be applied: {e}")
+
+    for path, ops in patched["paths"].items():
+        params = [p["name"] for op in ops.values() for p in op.get("parameters", [])]
+        if "include" in params:
+            sys.exit(f"refresh-openapi: overlay left 'include' on {path}")
+    return patched
+
+
+def write_spec(path: Path, spec: dict[str, object]) -> None:
+    rugged = json.dumps(spec, indent=4, sort_keys=True).rstrip("\n") + "\n"
+    path.write_text(rugged)
 
 
 def main() -> None:
@@ -50,14 +83,17 @@ def main() -> None:
 
     resp = httpx.get(f"{args.base_url.rstrip('/')}/openapi.json", timeout=10.0)
     resp.raise_for_status()
-    spec = prepare_spec(json.loads(resp.text))
+    source = prepare_spec(json.loads(resp.text))
 
-    rugged = json.dumps(spec, indent=4, sort_keys=True).rstrip("\n") + "\n"
-    SPEC_PATH.parent.mkdir(parents=True, exist_ok=True)
-    SPEC_PATH.write_text(rugged)
-    paths = spec.get("paths")
+    write_spec(SOURCE_PATH, source)
+    patched = apply_agent_overlay(source)
+    write_spec(SPEC_PATH, patched)
+
+    paths = patched.get("paths")
     assert isinstance(paths, dict)
-    print(f"wrote {SPEC_PATH} ({len(paths)} metrics paths)")  # noqa: T201
+    print(  # noqa: T201
+        f"wrote {SOURCE_PATH} and {SPEC_PATH} ({len(paths)} metrics paths, overlay applied)"
+    )
 
 
 if __name__ == "__main__":

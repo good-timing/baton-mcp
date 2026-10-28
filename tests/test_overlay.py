@@ -5,7 +5,9 @@ from __future__ import annotations
 from oas_patch.file_utils import load_file  # type: ignore[import-untyped]
 from oas_patch.overlay import apply_overlay  # type: ignore[import-untyped]
 
-from baton_mcp.server import OVERLAY_PATH
+from baton_mcp.server import SPEC_PATH
+
+OVERLAY_PATH = SPEC_PATH.with_name("overlay.json")
 
 
 def _spec(*param_names: str) -> dict[str, object]:
