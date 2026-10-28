@@ -37,14 +37,19 @@ def test_fetch_spec_loads_vendored_file():
     assert "/v0/metrics/demand_intents" in spec["paths"]
 
 
+def _metrics_param_names(spec):
+    return {
+        path: [p["name"] for op in ops.values() for p in op.get("parameters", [])]
+        for path, ops in spec["paths"].items()
+        if path.startswith("/v0/metrics/")
+    }
+
+
 def test_fetch_spec_strips_include_facet():
     spec = _fetch_spec()
     assert spec is not None
-    for path, ops in spec["paths"].items():
-        if not path.startswith("/v0/metrics/"):
-            continue
-        params = [p["name"] for op in ops.values() for p in op.get("parameters", [])]
-        assert "include" not in params, path
+    for path, names in _metrics_param_names(spec).items():
+        assert "include" not in names, path
 
 
 def test_fetch_spec_rejects_non_object_json(tmp_path, monkeypatch):
@@ -55,10 +60,11 @@ def test_fetch_spec_rejects_non_object_json(tmp_path, monkeypatch):
         _fetch_spec()
 
 
-def test_source_spec_keeps_include_for_the_overlay():
-    spec = json.loads(SOURCE_PATH.read_text())
-    for path, ops in spec["paths"].items():
-        if not path.startswith("/v0/metrics/"):
-            continue
-        params = [p["name"] for op in ops.values() for p in op.get("parameters", [])]
-        assert "include" in params, path
+def test_source_spec_has_include_and_vendored_spec_does_not():
+    source = _metrics_param_names(json.loads(SOURCE_PATH.read_text()))
+    vendored = _metrics_param_names(json.loads(SPEC_PATH.read_text()))
+    assert source, "expected metrics paths in the source spec"
+    for path, names in source.items():
+        assert "include" in names, path
+    for path, names in vendored.items():
+        assert "include" not in names, path
