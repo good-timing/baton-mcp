@@ -8,7 +8,8 @@ files under ``src/baton_mcp/``:
 - ``source.openapi.json``: the fetched spec with only paths under
   ``/v0/metrics/`` kept (the route maps exclude the rest, but vendoring a
   87-path spec makes the commit and the tool source slower to review than it
-  needs to be);
+  needs to be), and with schemas that only those dropped paths referenced
+  removed from ``components.schemas``;
 - ``openapi.json``: ``source.openapi.json`` with ``overlay.json`` applied.
   This is the file the server ships and loads at startup.
 
@@ -39,6 +40,7 @@ from oas_patch.overlay import apply_overlay  # type: ignore[import-untyped]
 from baton_mcp.server import SPEC_PATH
 
 METRICS_PREFIX = "/v0/metrics/"
+SCHEMA_REF_PREFIX = "#/components/schemas/"
 
 # Written next to the shipped spec: the pre-overlay source and the overlay that
 # turns it into the agent-facing surface.
@@ -46,16 +48,64 @@ SOURCE_PATH = SPEC_PATH.with_name("source.openapi.json")
 OVERLAY_PATH = SPEC_PATH.with_name("overlay.json")
 
 
+def _iter_refs(node: object):
+    """Yield every ``$ref`` string anywhere under ``node``."""
+    if isinstance(node, dict):
+        ref = node.get("$ref")
+        if isinstance(ref, str):
+            yield ref
+        for key, value in node.items():
+            if key != "$ref":
+                yield from _iter_refs(value)
+    elif isinstance(node, list):
+        for item in node:
+            yield from _iter_refs(item)
+
+
+def _schema_name(ref: str) -> str | None:
+    """Return the ``components.schemas`` name a ``$ref`` points at, if any."""
+    if not ref.startswith(SCHEMA_REF_PREFIX):
+        return None
+    return ref[len(SCHEMA_REF_PREFIX) :].split("/", 1)[0] or None
+
+
+def prune_unused_schemas(spec: dict[str, object]) -> dict[str, object]:
+    """Drop ``components.schemas`` entries the remaining paths cannot reach.
+
+    Keeps every schema referenced directly by a path, plus schemas reachable
+    through those schemas' own ``$ref``s. Schemas only the filtered-out paths
+    used would otherwise ship unused.
+    """
+    components = spec.get("components")
+    if not isinstance(components, dict):
+        return spec
+    schemas = components.get("schemas")
+    if not isinstance(schemas, dict):
+        return spec
+
+    reachable: set[str] = set()
+    pending = [name for ref in _iter_refs(spec.get("paths")) if (name := _schema_name(ref))]
+    while pending:
+        name = pending.pop()
+        if name in reachable or name not in schemas:
+            continue
+        reachable.add(name)
+        pending.extend(nested for ref in _iter_refs(schemas[name]) if (nested := _schema_name(ref)))
+
+    components["schemas"] = {name: schema for name, schema in schemas.items() if name in reachable}
+    return spec
+
+
 def prepare_spec(spec: dict[str, object]) -> dict[str, object]:
     """Reduce a fetched console spec to the vendored form."""
     paths = spec.get("paths")
     assert isinstance(paths, dict)
     spec["paths"] = {path: ops for path, ops in paths.items() if path.startswith(METRICS_PREFIX)}
-    return spec
+    return prune_unused_schemas(spec)
 
 
 def apply_agent_overlay(spec: dict[str, object]) -> dict[str, object]:
-    """Apply ``overlay.json`` and verify the agent-facing surface it produces."""
+    """Apply ``overlay.json``, prune orphaned schemas, and verify the result."""
     try:
         overlay = load_file(str(OVERLAY_PATH))
     except (OSError, ValueError) as e:
@@ -64,6 +114,9 @@ def apply_agent_overlay(spec: dict[str, object]) -> dict[str, object]:
         patched = apply_overlay(spec, overlay)
     except Exception as e:
         sys.exit(f"refresh-openapi: overlay at {OVERLAY_PATH} could not be applied: {e}")
+    # An overlay can remove the only reference to a schema, so prune
+    # the patched document.
+    patched = prune_unused_schemas(patched)
 
     for path, ops in patched["paths"].items():
         params = [p["name"] for op in ops.values() for p in op.get("parameters", [])]

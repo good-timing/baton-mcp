@@ -60,6 +60,30 @@ def test_fetch_spec_rejects_non_object_json(tmp_path, monkeypatch):
         _fetch_spec()
 
 
+def test_fetch_spec_raises_when_the_file_cannot_be_read(tmp_path, monkeypatch):
+    missing = tmp_path / "openapi.json"
+    monkeypatch.setattr("baton_mcp.server.SPEC_PATH", missing)
+    with pytest.raises(RuntimeError, match="not readable"):
+        _fetch_spec()
+
+
+def test_fetch_spec_raises_on_invalid_json(tmp_path, monkeypatch):
+    spec_path = tmp_path / "openapi.json"
+    spec_path.write_text("{not json")
+    monkeypatch.setattr("baton_mcp.server.SPEC_PATH", spec_path)
+    with pytest.raises(RuntimeError, match="not valid JSON"):
+        _fetch_spec()
+
+
+def test_build_mcp_raises_on_invalid_openapi(tmp_path, monkeypatch):
+    spec_path = tmp_path / "openapi.json"
+    # Valid JSON, but not a valid OpenAPI document: `info` is required.
+    spec_path.write_text(json.dumps({"openapi": "3.1.0", "paths": {}}))
+    monkeypatch.setattr("baton_mcp.server.SPEC_PATH", spec_path)
+    with pytest.raises(ValueError, match="Invalid OpenAPI schema"):
+        build_mcp()
+
+
 def test_source_spec_has_include_and_vendored_spec_does_not():
     source = _metrics_param_names(json.loads(SOURCE_PATH.read_text()))
     vendored = _metrics_param_names(json.loads(SPEC_PATH.read_text()))
