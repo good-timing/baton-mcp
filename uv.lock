@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.11"
 resolution-markers = [
     "python_full_version >= '3.15' and sys_platform == 'win32'",
@@ -162,7 +162,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "baton-sdk", extras = ["fastmcp", "http"], specifier = ">=0.8.21" },
+    { name = "baton-sdk", extras = ["fastmcp", "http"], specifier = ">=0.9.7" },
     { name = "fastmcp", specifier = ">=2.10,<4" },
     { name = "httpx", specifier = ">=0.25" },
     { name = "mcp", specifier = ">=1.30,<2" },
@@ -177,16 +177,17 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "baton-sdk"
-version = "0.8.21"
+version = "0.9.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
-    { name = "httpx" },
+    { name = "certifi" },
     { name = "pydantic" },
+    { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6f/8e/5c8eec84738908c3a079944351817cbee61e3491d6cb600c5bc938c05995/baton_sdk-0.8.21.tar.gz", hash = "sha256:a5825c0789497c568701946e9e001dabbb812ac42cee83b48c0b236457fd3ad7", size = 273112, upload-time = "2026-10-27T18:03:55.769Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1b/5c/55b0d40b5b034cf5979a0efb7a49dabe08f92de83541863ff1dffbcc24e8/baton_sdk-0.9.7.tar.gz", hash = "sha256:684c9090d3b7c3874cc72f47d199b867ef08eadcc91209cca175d58a2e82bd01", size = 339397, upload-time = "2026-11-04T01:32:48.217Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/15/b4/8b7106acf3e5c64acb22cc1ec894e96415a28a4990ccf71c68249ec1e923/baton_sdk-0.8.21-py3-none-any.whl", hash = "sha256:96ac95e4f7b4d6b0a7eaaf541041d27d41711070ceb116f477049304546f6624", size = 209272, upload-time = "2026-10-27T18:03:54.065Z" },
+    { url = "https://files.pythonhosted.org/packages/65/67/638fd0c2dfbdc935e424555cbe010446bbee7744617ac34d74aa263e4823/baton_sdk-0.9.7-py3-none-any.whl", hash = "sha256:fcb5efe59c90876c51c6a2f0af0210eda0220c87c702a35f690eb347a1b704d6", size = 242596, upload-time = "2026-11-04T01:32:46.744Z" },
 ]
 
 [package.optional-dependencies]
@@ -194,7 +195,7 @@ fastmcp = [
     { name = "fastmcp" },
 ]
 http = [
-    { name = "httpx" },
+    { name = "urllib3" },
 ]
 
 [[package]]
@@ -764,7 +765,7 @@ name = "importlib-metadata"
 version = "9.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "zipp" },
+    { name = "zipp", marker = "python_full_version < '3.14'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/6f/7e/1e7e8dc30634b93ebb3d58a3dea569ad146e656218d3960ab04f62047b29/importlib_metadata-9.0.1.tar.gz", hash = "sha256:ab830580bc0ef3db61ce8fae716389e5462b67e033018bab6d8f80ef17172f99", size = 59124, upload-time = "2026-08-28T15:30:34.646Z" }
 wheels = [
@@ -1820,8 +1821,8 @@ name = "secretstorage"
 version = "3.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cryptography" },
-    { name = "jeepney" },
+    { name = "cryptography", marker = "sys_platform != 'win32'" },
+    { name = "jeepney", marker = "sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/1c/03/e834bcd866f2f8a49a85eaff47340affa3bfa391ee9912a952a1faa68c7b/secretstorage-3.5.0.tar.gz", hash = "sha256:f04b8e4689cbce351744d5537bf6b1329c6fc68f91fa666f60a380edddcd11be", size = 19884, upload-time = "2025-11-23T19:02:53.191Z" }
 wheels = [
@@ -1882,6 +1883,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/6c/54/4651e4c5fe84300f8e03c0390aaad41bcb9c7b81d7783542a3ee690b40ee/uncalled_for-0.4.1.tar.gz", hash = "sha256:6412b19d1b1e7d431981fee01f8b47be7802f48328a48cbe9603acee757ec553", size = 56971, upload-time = "2026-10-09T12:54:34.941Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/bf/a6/ba763e3812e572de7291676c3a41adfac1ef1209a6acda6bae055970f127/uncalled_for-0.4.1-py3-none-any.whl", hash = "sha256:b611b38879d9fe5088297e7bb28f2ddd12d2d73dad933d93da107fb63eb4058e", size = 14889, upload-time = "2026-10-09T12:54:33.596Z" },
+]
+
+[[package]]
+name = "urllib3"
+version = "2.8.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e3/05/b17359e1cefb4f909b5e40b1b90a496d987258916dbbf88e842c729f510e/urllib3-2.8.0.tar.gz", hash = "sha256:63bf2ead4c879426ebf22ef2a781eeb4aa3b4ae798a0435506f8687fd5bb9b63", size = 458972, upload-time = "2026-09-15T19:29:36.253Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/92/9d/c4e665119135114480843e7ab388fa94d8480650450e6f8e26b70d323a4c/urllib3-2.8.0-py3-none-any.whl", hash = "sha256:0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3", size = 135717, upload-time = "2026-09-15T19:29:34.577Z" },
 ]
 
 [[package]]

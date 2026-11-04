@@ -169,7 +169,7 @@ def _instrument(mcp: FastMCP) -> None:
         from baton.sinks import StdoutSink
 
         if dsn:
-            install_baton(mcp, dsn=dsn)
+            install_baton(mcp, VendorConfig(dsn=dsn, settings="console"))
         else:
             install_baton(
                 mcp,
