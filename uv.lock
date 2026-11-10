@@ -163,7 +163,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "baton-sdk", extras = ["fastmcp", "http"], specifier = ">=1.1.0" },
-    { name = "fastmcp", specifier = ">=2.10,<4" },
+    { name = "fastmcp", specifier = ">=2.14,<4" },
     { name = "httpx", specifier = ">=0.25" },
     { name = "mcp", specifier = ">=1.30,<2" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
