@@ -1,0 +1,85 @@
+# Deploys baton-mcp to Cloud Run (mcp.goodtiming.ai) on every push to main.
+#
+# The service, its env (BATON_DSN, BATON_API_BASE_URL) and who may invoke it are
+# owned by baton-console/infra/baton-mcp. This identity may only push an image
+# and run `gcloud run deploy --image`, and only from a push to main.
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  REGION: us-central1
+  SERVICE: baton-mcp
+  IMAGE_REPO: us-central1-docker.pkg.dev/baton-496817/baton-mcp/baton-mcp
+  CACHE_REPO: us-central1-docker.pkg.dev/baton-496817/baton-mcp/buildcache
+  WIF_PROVIDER: projects/341495956319/locations/global/workloadIdentityPools/github-baton-mcp/providers/github-provider
+  WIF_SA: github-actions-baton-mcp@baton-496817.iam.gserviceaccount.com
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.WIF_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - uses: docker/setup-buildx-action@v3
+
+      - id: image
+        run: echo "image=${{ env.IMAGE_REPO }}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: Build + push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.image.outputs.image }}
+          # Its own package: the repo keeps only the 10 newest versions per
+          # package, and those should all be deployable images.
+          cache-from: type=registry,ref=${{ env.CACHE_REPO }}:latest
+          cache-to: type=registry,ref=${{ env.CACHE_REPO }}:latest,mode=max
+
+  deploy:
+    needs: [build, ci]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.WIF_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy
+        run: |
+          gcloud run deploy "$SERVICE" \
+            --image ${{ needs.build.outputs.image }} \
+            --region "$REGION" \
+            --quiet

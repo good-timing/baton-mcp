@@ -27,7 +27,7 @@ plane is the public `/v0/metrics` JSON API.
 | Env | Default | Meaning |
 | --- | --- | --- |
 | `BATON_API_BASE_URL` | `https://baton.goodtiming.ai` | Baton API origin |
-| `BATON_MCP_HOST` / `BATON_MCP_PORT` | `::` (dual-stack) / `8000` | Listen address |
+| `BATON_MCP_HOST` / `BATON_MCP_PORT` | `0.0.0.0` / `PORT`, else `8000` | Listen address. The image sets `PORT=8080` and runs stateless (`FASTMCP_STATELESS_HTTP=true`) for Cloud Run |
 
 ## Running
 
