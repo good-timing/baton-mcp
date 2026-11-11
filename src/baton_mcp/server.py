@@ -182,9 +182,7 @@ def _parse_labels(raw: str) -> dict[str, tuple[str, ...]]:
         if not sep or not workspace or not label:
             _instrument_logger.warning("%s: skipping malformed entry %r", LABELS_ENV, entry)
             continue
-        names = labels.setdefault(workspace, [])
-        if label not in names:
-            names.append(label)
+        labels.setdefault(workspace, []).append(label)
     return {workspace: tuple(names) for workspace, names in labels.items()}
 
 
@@ -216,21 +214,17 @@ def _instrument(mcp: FastMCP) -> None:
         from baton.sinks import StdoutSink
 
         resolve_principal = _make_principal_resolver(_parse_labels(os.environ.get(LABELS_ENV, "")))
-        if dsn:
-            install_baton(
-                mcp,
-                VendorConfig(dsn=dsn, settings="console", resolve_principal=resolve_principal),
+        config = (
+            VendorConfig(dsn=dsn, settings="console", resolve_principal=resolve_principal)
+            if dsn
+            else VendorConfig(
+                vendor_id="baton-mcp",
+                vendor_display_name="Baton MCP",
+                sink=StdoutSink(),
+                resolve_principal=resolve_principal,
             )
-        else:
-            install_baton(
-                mcp,
-                VendorConfig(
-                    vendor_id="baton-mcp",
-                    vendor_display_name="Baton MCP",
-                    sink=StdoutSink(),
-                    resolve_principal=resolve_principal,
-                ),
-            )
+        )
+        install_baton(mcp, config)
         _instrument_logger.info("baton-mcp self-instrumentation enabled")
     except Exception as e:  # never take the server down over telemetry
         _instrument_logger.warning("baton-mcp self-instrumentation skipped: %s", e)

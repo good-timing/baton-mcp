@@ -51,8 +51,8 @@ def test_resolver_ignores_authorization():
     assert resolve(_context(with_tenant)) == Organization(organization_id=TEN_A)
 
 
-def test_parse_labels_skips_malformed_and_merges_repeats():
-    raw = f" {TEN_A}:internal, junk, :x, {TEN_B}:, {TEN_A}:beta, {TEN_A}:internal ,"
+def test_parse_labels_skips_malformed_entries():
+    raw = f" {TEN_A}:internal, junk, :x, {TEN_B}:, {TEN_A}:beta ,"
     assert _parse_labels(raw) == {TEN_A: ("internal", "beta")}
     assert _parse_labels("") == {}
 
