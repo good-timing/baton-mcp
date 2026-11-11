@@ -28,6 +28,8 @@ plane is the public `/v0/metrics` JSON API.
 | --- | --- | --- |
 | `BATON_API_BASE_URL` | `https://baton.goodtiming.ai` | Baton API origin |
 | `BATON_MCP_HOST` / `BATON_MCP_PORT` | `0.0.0.0` / `PORT`, else `8000` | Listen address. The image sets `PORT=8080` and runs stateless (`FASTMCP_STATELESS_HTTP=true`) for Cloud Run |
+| `BATON_DSN` | unset | Where baton-mcp sends its own telemetry and reads its capture settings. Unset, events go to stdout |
+| `BATON_MCP_LABELS` | unset | Capture-settings labels per caller workspace (`X-Baton-Tenant-Id`), as `ten_a:internal,ten_b:beta` |
 
 ## Running
 

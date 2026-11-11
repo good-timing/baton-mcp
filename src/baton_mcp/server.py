@@ -26,7 +26,6 @@ import json
 import logging
 import os
 import sys
-from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -37,10 +36,10 @@ from fastmcp.server.providers.openapi import MCPType, RouteMap
 from starlette.responses import JSONResponse
 
 from baton_mcp import __version__
-from baton_mcp.config import TENANT_HEADER, api_base_url
+from baton_mcp.config import TENANT_HEADER, WORKSPACE_RE, api_base_url
 
 if TYPE_CHECKING:
-    from baton import Organization, PrincipalResolutionContext
+    from baton import PrincipalResolutionContext, ResolvePrincipalHook
 
 # Per-request timeout for upstream Console API calls. Hardcoded (not env-driven)
 # to keep the surface small; bump here if a metrics query needs more room.
@@ -165,6 +164,8 @@ def _add_health(mcp: FastMCP) -> None:
 
 LABELS_ENV = "BATON_MCP_LABELS"
 
+_instrument_logger = logging.getLogger("baton_mcp.instrument")
+
 
 def _parse_labels(raw: str) -> dict[str, tuple[str, ...]]:
     """Parse ``ten_a:internal,ten_a:beta,ten_b:beta`` into labels per workspace.
@@ -179,20 +180,19 @@ def _parse_labels(raw: str) -> dict[str, tuple[str, ...]]:
             continue
         workspace, sep, label = (part.strip() for part in entry.partition(":"))
         if not sep or not workspace or not label:
-            logging.getLogger("baton_mcp.instrument").warning(
-                "%s: skipping malformed entry %r", LABELS_ENV, entry
-            )
+            _instrument_logger.warning("%s: skipping malformed entry %r", LABELS_ENV, entry)
             continue
-        labels.setdefault(workspace, [])
-        if label not in labels[workspace]:
-            labels[workspace].append(label)
+        names = labels.setdefault(workspace, [])
+        if label not in names:
+            names.append(label)
     return {workspace: tuple(names) for workspace, names in labels.items()}
 
 
-def _make_principal_resolver(
-    labels: dict[str, tuple[str, ...]],
-) -> Callable[[PrincipalResolutionContext], Organization | None]:
+def _make_principal_resolver(labels: dict[str, tuple[str, ...]]) -> ResolvePrincipalHook:
     """Name the caller by workspace, from the tenant header.
+
+    The header is caller-supplied, so anything not shaped like a workspace id
+    resolves to None rather than becoming an unbounded organization id.
 
     Never derives anything from ``Authorization``: the bearer is the caller's
     secret (``test_resolver_ignores_authorization``).
@@ -200,8 +200,8 @@ def _make_principal_resolver(
     from baton import Organization
 
     def resolve(context: PrincipalResolutionContext) -> Organization | None:
-        tenant = ((context.headers or {}).get(TENANT_HEADER) or "").strip()
-        if not tenant:
+        tenant = (context.headers or {}).get(TENANT_HEADER) or ""
+        if not WORKSPACE_RE.fullmatch(tenant):
             return None
         return Organization(organization_id=tenant, labels=labels.get(tenant, ()))
 
@@ -210,7 +210,6 @@ def _make_principal_resolver(
 
 def _instrument(mcp: FastMCP) -> None:
     """Self-instrumentation via baton-sdk. Always on."""
-    logger = logging.getLogger("baton_mcp.instrument")
     dsn = os.environ.get("BATON_DSN", "").strip()
     try:
         from baton.integrations.standalone import VendorConfig, install_baton
@@ -232,6 +231,6 @@ def _instrument(mcp: FastMCP) -> None:
                     resolve_principal=resolve_principal,
                 ),
             )
-        logger.info("baton-mcp self-instrumentation enabled")
+        _instrument_logger.info("baton-mcp self-instrumentation enabled")
     except Exception as e:  # never take the server down over telemetry
-        logger.warning("baton-mcp self-instrumentation skipped: %s", e)
+        _instrument_logger.warning("baton-mcp self-instrumentation skipped: %s", e)

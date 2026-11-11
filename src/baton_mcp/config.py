@@ -9,11 +9,15 @@ image runs against beta and prod.
 from __future__ import annotations
 
 import os
+import re
 
 # Tenant auth key travels in this transport header, mirroring the console's
 # ingest/auth.py TENANT_HEADER so the two ends cannot drift apart. Spelled here
 # (not imported) because baton-mcp depends only on the HTTP surface.
 TENANT_HEADER = "x-baton-tenant-id"
+
+# Mirrors the console's dsn.py WORKSPACE_RE.
+WORKSPACE_RE = re.compile(r"ten_(?:[0-9a-f]{8}|[0-9a-f]{32})")
 
 DEFAULT_API_BASE_URL = "https://baton.goodtiming.ai"
 
