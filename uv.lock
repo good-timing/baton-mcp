@@ -162,7 +162,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "baton-sdk", extras = ["fastmcp", "http"], specifier = ">=1.1.2" },
+    { name = "baton-sdk", extras = ["fastmcp", "http"], specifier = ">=1.3.0" },
     { name = "fastmcp", specifier = ">=2.14,<4" },
     { name = "httpx", specifier = ">=0.25" },
     { name = "mcp", specifier = ">=1.30,<2" },
@@ -177,7 +177,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "baton-sdk"
-version = "1.1.2"
+version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -185,9 +185,9 @@ dependencies = [
     { name = "pydantic" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3f/a7/ee420e4f678250e32ffbde3de4e3da94033bba0d60bc7ce87d72ad62ceb6/baton_sdk-1.1.2.tar.gz", hash = "sha256:74d5b84b523bf55b7d1942c3dda7091d91b922696d422a34b6773e012ee59b31", size = 355230, upload-time = "2026-11-11T18:02:41.31Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7b/3e/b3ce9dc10cf73f93a6193fe37520a012793651c6ad1221660906e552ada3/baton_sdk-1.3.0.tar.gz", hash = "sha256:6660cbb0794d83a5e6e264f31765b4d2b040c507b32a9e5fa85298e19bfa3127", size = 383274, upload-time = "2026-11-15T19:39:24.433Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/29/15/1e45f4b04443986184fc629dcadcbbb96208e4c047710cea00011ede5e68/baton_sdk-1.1.2-py3-none-any.whl", hash = "sha256:1d6588747f95b6e82ef6837885b4c3eb79cfd3043551dcdbb43a454787645330", size = 254479, upload-time = "2026-11-11T18:02:39.882Z" },
+    { url = "https://files.pythonhosted.org/packages/b3/32/afdd61a32054775bdfd01234f0e973b9337265e72cd449cd12ee1aadd22f/baton_sdk-1.3.0-py3-none-any.whl", hash = "sha256:242c26a3bd0d7561160485c6dcfe96fdfdf3502dc2c5f2c3d2e8d223fe4f5dab", size = 270921, upload-time = "2026-11-15T19:39:22.704Z" },
 ]
 
 [package.optional-dependencies]
