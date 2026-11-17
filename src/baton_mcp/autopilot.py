@@ -6,11 +6,17 @@ machine, so the tool returns steps for the calling agent to follow there.
 
 from __future__ import annotations
 
+import re
+
 from fastmcp import FastMCP
 
 from baton_mcp.config import api_base_url
 
-BATON_EVAL = "baton-eval@0.1"
+BATON_EVAL = "baton-eval@0.1.0"
+
+# Mirrors the console's dsn.py SERVER_RE. The id is pasted into a shell
+# command, so nothing else may get through.
+SERVER_RE = re.compile(r"[a-z0-9-]{1,48}")
 
 STEPS = """\
 Follow these steps on the developer's machine. Ask before each command that \
@@ -24,10 +30,11 @@ in the code wins over the variable and sends test traffic to production.
 TypeScript 1.2.0 or later.
    If any of these fails, show the developer what to change and stop.
 
-2. Tasks. If baton-eval.toml already exists, skip to step 4. Otherwise draft \
-evals/tasks.jsonl with the developer: one JSON object per line, for example
+2. Tasks. If baton-eval.toml exists and its server is "{vendor_id}", skip to \
+step 4. If it names another server, ask the developer which one they mean. \
+Otherwise draft evals/tasks.jsonl with the developer: one JSON object per line, for example
    {{"id": "<short-id>", "prompt": "<what a user would ask>", "check": \
-{{"tool": "<one of the server's tools>", "args": {{...}}, "reply_contains": \
+{{"tool": "<one of the server's tools>", "args": {{"<arg>": "<value>"}}, "reply_contains": \
 "<path to a value in that tool's result, e.g. rows[0].name>"}}}}
    "check" is the call baton-eval makes after the agent stops; the agent's \
 reply must contain the value "reply_contains" points to. Only text with a \
@@ -57,6 +64,8 @@ are on the experiment's page.
 
 
 def autopilot_steps(vendor_id: str) -> str:
+    if not SERVER_RE.fullmatch(vendor_id):
+        raise ValueError(f"not a server id: {vendor_id!r}; use the last part of the server's DSN")
     return STEPS.format(vendor_id=vendor_id, console=api_base_url(), baton_eval=BATON_EVAL)
 
 
