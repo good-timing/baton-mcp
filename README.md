@@ -21,6 +21,7 @@ plane is the public `/v0/metrics` JSON API.
 | `top_gaps_clustered` | `vendor_id`, `window_days?` |
 | `failure_modes_for_tool` | `vendor_id`, `tool_name`, `window_days?` |
 | `demand_intents` | `vendor_id`, `window_days?` |
+| `start_autopilot` | `vendor_id`. Returns the steps for running a Baton Autopilot experiment with [baton-eval](https://www.npmjs.com/package/baton-eval) on the developer's machine |
 
 ## Configuration
 

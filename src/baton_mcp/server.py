@@ -2,8 +2,9 @@
 
 This server is generated from the Console's OpenAPI document at
 ``/openapi.json`` using ``FastMCP.from_openapi``. Only routes under
-``/v0/metrics/`` are exposed; everything else (ingest, auth, …) is excluded
-via a ``RouteMap``.
+``/v0/metrics/`` become tools; everything else (ingest, auth, …) is excluded
+via a ``RouteMap``. ``start_autopilot`` (``autopilot.py``) is the one
+hand-written tool.
 
 Auth mirrors the Console's JSON adapter: the workspace credential travels in
 the **transport headers** (Bearer token + ``X-Baton-Tenant-Id``), never the
@@ -36,6 +37,7 @@ from fastmcp.server.providers.openapi import MCPType, RouteMap
 from starlette.responses import JSONResponse
 
 from baton_mcp import __version__
+from baton_mcp.autopilot import add_autopilot
 from baton_mcp.config import TENANT_HEADER, WORKSPACE_RE, api_base_url
 
 if TYPE_CHECKING:
@@ -129,9 +131,9 @@ def _fetch_spec() -> dict[str, object]:
 def build_mcp() -> FastMCP:
     """Construct the metrics MCP server from the Console's OpenAPI spec.
 
-    Only ``/v0/metrics/*`` routes are exposed. Self-instrumentation via
-    baton-sdk registers middleware over the underlying MCP server, so it
-    captures the generated tools like any other.
+    Only ``/v0/metrics/*`` routes become tools, plus ``start_autopilot``.
+    Self-instrumentation via baton-sdk registers middleware over the
+    underlying MCP server, so it captures every tool.
     """
     base_url = api_base_url()
     spec = _fetch_spec()
@@ -151,6 +153,7 @@ def build_mcp() -> FastMCP:
         ],
     )
 
+    add_autopilot(mcp)
     _instrument(mcp)
     _add_health(mcp)
     return mcp
