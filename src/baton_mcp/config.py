@@ -16,8 +16,9 @@ import re
 # (not imported) because baton-mcp depends only on the HTTP surface.
 TENANT_HEADER = "x-baton-tenant-id"
 
-# Mirrors the console's dsn.py WORKSPACE_RE.
+# Mirror the console's dsn.py WORKSPACE_RE and SERVER_RE.
 WORKSPACE_RE = re.compile(r"ten_(?:[0-9a-f]{8}|[0-9a-f]{32})")
+SERVER_RE = re.compile(r"^[a-z0-9-]{1,48}$")
 
 DEFAULT_API_BASE_URL = "https://baton.goodtiming.ai"
 

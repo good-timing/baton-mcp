@@ -131,9 +131,9 @@ def _fetch_spec() -> dict[str, object]:
 def build_mcp() -> FastMCP:
     """Construct the metrics MCP server from the Console's OpenAPI spec.
 
-    Only ``/v0/metrics/*`` routes become tools, plus ``start_autopilot``.
-    Self-instrumentation via baton-sdk registers middleware over the
-    underlying MCP server, so it captures every tool.
+    Only ``/v0/metrics/*`` routes become generated tools. Self-instrumentation
+    via baton-sdk registers middleware over the underlying MCP server, so it
+    captures every tool.
     """
     base_url = api_base_url()
     spec = _fetch_spec()

@@ -6,17 +6,14 @@ machine, so the tool returns steps for the calling agent to follow there.
 
 from __future__ import annotations
 
-import re
+from typing import Annotated
 
 from fastmcp import FastMCP
+from pydantic import Field
 
-from baton_mcp.config import api_base_url
+from baton_mcp.config import SERVER_RE, api_base_url
 
 BATON_EVAL = "baton-eval@0.1.0"
-
-# Mirrors the console's dsn.py SERVER_RE. The id is pasted into a shell
-# command, so nothing else may get through.
-SERVER_RE = re.compile(r"[a-z0-9-]{1,48}")
 
 STEPS = """\
 Follow these steps on the developer's machine. Ask before each command that \
@@ -64,14 +61,15 @@ are on the experiment's page.
 
 
 def autopilot_steps(vendor_id: str) -> str:
-    if not SERVER_RE.fullmatch(vendor_id):
-        raise ValueError(f"not a server id: {vendor_id!r}; use the last part of the server's DSN")
     return STEPS.format(vendor_id=vendor_id, console=api_base_url(), baton_eval=BATON_EVAL)
 
 
 def add_autopilot(mcp: FastMCP) -> None:
     @mcp.tool
-    def start_autopilot(vendor_id: str) -> str:
+    def start_autopilot(
+        # Pasted into a shell command the developer runs (test_tool_refuses_anything_but_a_server_id).
+        vendor_id: Annotated[str, Field(pattern=SERVER_RE.pattern)],
+    ) -> str:
         """Start a Baton Autopilot experiment. Real agents run your server's tasks with and without text fixes, and the Console keeps the fixes that help.
 
         Call it when the developer asks Baton to improve their server. It returns the steps to follow on the developer's machine and runs nothing itself.
