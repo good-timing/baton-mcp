@@ -18,6 +18,7 @@ def test_steps_fill_in_the_server_and_keep_the_key_away_from_the_agent(monkeypat
     assert "https://console.example" in steps
     assert "Never ask for the key, read it, or pass it to a tool" in steps
     assert "wait for their yes" in steps
+    assert "Autopilot is in early access and stop" in steps
 
 
 async def test_tool_refuses_anything_but_a_server_id():

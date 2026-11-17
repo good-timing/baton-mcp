@@ -39,8 +39,9 @@ letter in it is matched, so point at a name or label, not a number or date. Show
 confirm.
 
 3. Test key. The developer makes a test key for this server on its Autopilot \
-tab in the Baton Console ({console}). Never ask for the key, read it, or pass \
-it to a tool. Ask the developer to run init in their own terminal, with the \
+tab in the Baton Console ({console}). If the Console says Autopilot isn't open \
+in this workspace yet, tell the developer Autopilot is in early access and stop. \
+Never ask for the key, read it, or pass it to a tool. Ask the developer to run init in their own terminal, with the \
 key in BATON_EVAL_DSN or pasted when asked:
    npx -y {baton_eval} init --server {vendor_id} --tasks evals/tasks.jsonl \
 --model <model> -- <command that starts the server>
@@ -54,9 +55,11 @@ agent sessions at up to max_budget_usd dollars each, and wait for their yes.
    Once it starts, the log has a line "experiment <id>: N tasks, budget B \
 sessions". Give the developer the \
 experiment id, and tell them it is on the server's Autopilot tab in the \
-Console. The run ends with a line like "experiment <id>: N steps, P pass, \
-F fail, S short"; report it when it appears. Results and any fix to approve \
-are on the experiment's page.
+Console. When the run finishes, the log has a line starting "experiment \
+<id>: N steps, P pass, F fail, S short", sometimes followed by why it \
+stopped; report it. If the run fails instead, it exits with code 1 and the \
+log ends with "baton-eval: <message>"; show the developer that message and \
+its hint. Results and any fix to approve are on the experiment's page.
 """
 
 
