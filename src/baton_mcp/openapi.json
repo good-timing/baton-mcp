@@ -143,6 +143,138 @@
     },
     "openapi": "3.1.0",
     "paths": {
+        "/v0/experiments/{experiment_id}": {
+            "get": {
+                "description": "An experiment's state and outcome. A find lists the issues its\nbaseline hit, then prod issues no task hit; a fix gives its numbers\nbefore and after.",
+                "operationId": "get_experiment",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "experiment_id",
+                        "required": true,
+                        "schema": {
+                            "pattern": "^exp_[a-z2-7]{10}$",
+                            "title": "Experiment Id",
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "The server's id: the last part of its DSN, as on its Settings page.",
+                        "in": "query",
+                        "name": "server",
+                        "required": true,
+                        "schema": {
+                            "description": "The server's id: the last part of its DSN, as on its Settings page.",
+                            "maxLength": 200,
+                            "title": "Server",
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "additionalProperties": true,
+                                    "title": "Response Get Experiment",
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "Successful Response"
+                    },
+                    "422": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        },
+                        "description": "Validation Error"
+                    }
+                },
+                "security": [
+                    {
+                        "TenantId": []
+                    },
+                    {
+                        "BearerApiKey": []
+                    }
+                ],
+                "summary": "One Autopilot experiment: its state, verdict, ranked issues or fix result",
+                "tags": [
+                    "autopilot"
+                ]
+            }
+        },
+        "/v0/issues/{issue}": {
+            "get": {
+                "description": "The tool, its error, a few of the failing calls' arguments as the\nSDK stored them, and the task file's check format. Rewrite the\nexamples into a new task; never copy them.",
+                "operationId": "get_issue",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "issue",
+                        "required": true,
+                        "schema": {
+                            "pattern": "^[0-9a-f]{16}\\.[0-9a-f]{16}$",
+                            "title": "Issue",
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "The server's id: the last part of its DSN, as on its Settings page.",
+                        "in": "query",
+                        "name": "server",
+                        "required": true,
+                        "schema": {
+                            "description": "The server's id: the last part of its DSN, as on its Settings page.",
+                            "maxLength": 200,
+                            "title": "Server",
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "additionalProperties": true,
+                                    "title": "Response Get Issue",
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "description": "Successful Response"
+                    },
+                    "422": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        },
+                        "description": "Validation Error"
+                    }
+                },
+                "security": [
+                    {
+                        "TenantId": []
+                    },
+                    {
+                        "BearerApiKey": []
+                    }
+                ],
+                "summary": "One issue's evidence for drafting a task that reproduces it",
+                "tags": [
+                    "autopilot"
+                ]
+            }
+        },
         "/v0/metrics/demand_intents": {
             "get": {
                 "description": "What agents arrive to do on a vendor, ranked by distinct sessions.",

@@ -6,9 +6,8 @@ reduces it to exactly what ``FastMCP.from_openapi`` consumes, and writes two
 files under ``src/baton_mcp/``:
 
 - ``source.openapi.json``: the fetched spec with only paths under
-  ``/v0/metrics/`` kept (the route maps exclude the rest, but vendoring a
-  87-path spec makes the commit and the tool source slower to review than it
-  needs to be), and with schemas that only those dropped paths referenced
+  ``/v0/metrics/`` and the two Autopilot readers kept, since every GET route
+  in the vendored spec becomes a tool, and with schemas that only those dropped paths referenced
   removed from ``components.schemas``;
 - ``openapi.json``: ``source.openapi.json`` with ``overlay.json`` applied.
   This is the file the server ships and loads at startup.
@@ -40,6 +39,7 @@ from oas_patch.overlay import apply_overlay  # type: ignore[import-untyped]
 from baton_mcp.server import SPEC_PATH
 
 METRICS_PREFIX = "/v0/metrics/"
+AUTOPILOT_PATHS = frozenset({"/v0/experiments/{experiment_id}", "/v0/issues/{issue}"})
 SCHEMA_REF_PREFIX = "#/components/schemas/"
 
 # Written next to the shipped spec: the pre-overlay source and the overlay that
@@ -100,7 +100,11 @@ def prepare_spec(spec: dict[str, object]) -> dict[str, object]:
     """Reduce a fetched console spec to the vendored form."""
     paths = spec.get("paths")
     assert isinstance(paths, dict)
-    spec["paths"] = {path: ops for path, ops in paths.items() if path.startswith(METRICS_PREFIX)}
+    spec["paths"] = {
+        path: ops
+        for path, ops in paths.items()
+        if path.startswith(METRICS_PREFIX) or path in AUTOPILOT_PATHS
+    }
     return prune_unused_schemas(spec)
 
 
@@ -197,7 +201,7 @@ def main() -> None:
     paths = patched.get("paths")
     assert isinstance(paths, dict)
     print(  # noqa: T201
-        f"wrote {SOURCE_PATH} and {SPEC_PATH} ({len(paths)} metrics paths, overlay applied)"
+        f"wrote {SOURCE_PATH} and {SPEC_PATH} ({len(paths)} paths, overlay applied)"
     )
 
 

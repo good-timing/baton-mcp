@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 
 import pytest
+from fastmcp import Client
 from starlette.testclient import TestClient
 
 from baton_mcp import __version__
@@ -92,3 +93,23 @@ def test_source_spec_has_include_and_vendored_spec_does_not():
         assert "include" in names, path
     for path, names in vendored.items():
         assert "include" not in names, path
+
+
+async def test_tool_surface_is_metrics_autopilot_and_its_two_readers():
+    async with Client(build_mcp()) as client:
+        tools = {tool.name for tool in await client.list_tools()}
+    assert tools == {
+        "top_friction_by_tool",
+        "top_gaps_clustered",
+        "failure_modes_for_tool",
+        "demand_intents",
+        "start_autopilot",
+        "get_experiment",
+        "get_issue",
+    }
+
+
+def test_no_tool_input_comes_from_a_header():
+    for path, ops in _fetch_spec()["paths"].items():
+        for op in ops.values():
+            assert all(p["in"] != "header" for p in op.get("parameters", [])), path

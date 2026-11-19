@@ -1,9 +1,10 @@
 """MCP server built from the Console's OpenAPI spec.
 
 This server is generated from the Console's OpenAPI document at
-``/openapi.json`` using ``FastMCP.from_openapi``. Only routes under
-``/v0/metrics/`` become tools; everything else (ingest, auth, …) is excluded
-via a ``RouteMap``. ``start_autopilot`` (``autopilot.py``) is the one
+``/openapi.json`` using ``FastMCP.from_openapi``. The vendored spec keeps only
+the routes that become tools, the ``/v0/metrics/`` routes and the Autopilot
+readers ``get_experiment`` and ``get_issue``, and every GET in it becomes a
+tool. ``start_autopilot`` (``autopilot.py``) is the one
 hand-written tool.
 
 Auth mirrors the Console's JSON adapter: the workspace credential travels in
@@ -129,11 +130,10 @@ def _fetch_spec() -> dict[str, object]:
 
 
 def build_mcp() -> FastMCP:
-    """Construct the metrics MCP server from the Console's OpenAPI spec.
+    """Construct the MCP server from the Console's OpenAPI spec.
 
-    Only ``/v0/metrics/*`` routes become generated tools. Self-instrumentation
-    via baton-sdk registers middleware over the underlying MCP server, so it
-    captures every tool.
+    Self-instrumentation via baton-sdk registers middleware over the
+    underlying MCP server, so it captures every tool.
     """
     base_url = api_base_url()
     spec = _fetch_spec()
@@ -146,9 +146,7 @@ def build_mcp() -> FastMCP:
         client=client,
         name="baton-mcp",
         route_maps=[
-            # Only metrics routes become tools.
-            RouteMap(methods=["GET"], pattern=r"^/v0/metrics/", mcp_type=MCPType.TOOL),
-            # Everything else (ingest, auth, UI, …) is dropped.
+            RouteMap(methods=["GET"], mcp_type=MCPType.TOOL),
             RouteMap(pattern=r".*", mcp_type=MCPType.EXCLUDE),
         ],
     )
