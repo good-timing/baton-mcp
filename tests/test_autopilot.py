@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 from fastmcp import Client
 from fastmcp.exceptions import ToolError
@@ -18,6 +20,7 @@ def test_steps_fill_in_the_server_and_keep_the_key_away_from_the_agent(monkeypat
     assert "https://console.example" in steps
     assert "Never ask for the key, read it, or pass it to a tool" in steps
     assert "wait for their yes" in steps
+    assert "the check's arguments and result" in steps
     assert "Autopilot is in early access and stop" in steps
 
 
@@ -33,3 +36,10 @@ async def test_tool_refuses_anything_but_a_server_id():
                 await client.call_tool(
                     "start_autopilot", {"vendor_id": vendor_id, "user_goal": "g"}
                 )
+
+
+def test_example_task_is_a_task_baton_eval_reads():
+    (example,) = [line for line in autopilot_steps("srv-abc123").splitlines() if '{"id"' in line]
+    task = json.loads(example)
+    assert set(task) == {"id", "prompt", "check"}
+    assert set(task["check"]) == {"tool", "args", "answer"}
