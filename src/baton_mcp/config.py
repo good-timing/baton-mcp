@@ -19,6 +19,7 @@ TENANT_HEADER = "x-baton-tenant-id"
 # Mirror the console's dsn.py WORKSPACE_RE and SERVER_RE.
 WORKSPACE_RE = re.compile(r"ten_(?:[0-9a-f]{8}|[0-9a-f]{32})")
 SERVER_RE = re.compile(r"^[a-z0-9-]{1,48}$")
+ISSUE_RE = re.compile(r"^[0-9a-f]{16}\.[0-9a-f]{16}$")
 
 DEFAULT_API_BASE_URL = "https://baton.goodtiming.ai"
 
